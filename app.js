@@ -1,32 +1,4 @@
-// Firebase V9 - Modular
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-import { 
-    getAuth, 
-    signInWithEmailAndPassword, 
-    signOut, 
-    onAuthStateChanged,
-    createUserWithEmailAndPassword,
-    updatePassword,
-    reauthenticateWithCredential,
-    EmailAuthProvider
-} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-import { 
-    getFirestore,
-    collection,
-    doc,
-    setDoc,
-    getDoc,
-    getDocs,
-    query,
-    where,
-    orderBy,
-    limit,
-    updateDoc,
-    addDoc,
-    serverTimestamp
-} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
-
-// Configuração do Firebase (NÃO ALTERAR)
+// ==================== CONFIGURAÇÃO FIREBASE ====================
 const firebaseConfig = {
     apiKey: "AIzaSyAuCkAymqWECmPWDShZNXrGoFCnSYbWFSo",
     authDomain: "funil-de-vendas-global.firebaseapp.com",
@@ -39,453 +11,369 @@ const firebaseConfig = {
 };
 
 // Inicializar Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+const app = firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const database = firebase.database();
 
-// Elementos DOM
-const loginScreen = document.getElementById('loginScreen');
-const mainScreen = document.getElementById('mainScreen');
-const loginBtn = document.getElementById('loginBtn');
-const logoutBtn = document.getElementById('logoutBtn');
-const userName = document.getElementById('userName');
-const userRole = document.getElementById('userRole');
-const loginError = document.getElementById('loginError');
-
-// Variáveis globais
+// ==================== VARIÁVEIS GLOBAIS ====================
 let currentUser = null;
-let currentUserData = null;
+let currentUserRole = null;
+let currentUserId = null;
 let statusChart = null;
-let temperatureChart = null;
+let sellerChart = null;
+let myStatusChart = null;
+let myCityChart = null;
 
 // ==================== INICIALIZAÇÃO ====================
-document.addEventListener('DOMContentLoaded', initApp);
+document.addEventListener('DOMContentLoaded', function() {
+    initApp();
+    setupEventListeners();
+});
 
 async function initApp() {
-    // Verificar estado de autenticação
-    onAuthStateChanged(auth, async (user) => {
+    // Monitorar estado de autenticação
+    auth.onAuthStateChanged(async (user) => {
         if (user) {
-            // Usuário logado
             currentUser = user;
-            await loadUserData(user.uid);
+            currentUserId = user.uid;
+            await loadUserData();
             showMainScreen();
-            setupEventListeners();
-            
-            // Configurar menu baseado no papel
-            configureMenuBasedOnRole();
-            
-            // Redirecionar baseado no tipo de usuário
-            redirectBasedOnRole();
+            setupNavigation();
         } else {
-            // Usuário não logado
             showLoginScreen();
         }
     });
 }
 
 // ==================== AUTENTICAÇÃO ====================
-loginBtn.addEventListener('click', async (e) => {
-    e.preventDefault();
+async function setupEventListeners() {
+    // Login
+    document.getElementById('loginBtn').addEventListener('click', handleLogin);
     
-    const email = document.getElementById('email').value.trim();
+    // Esqueci senha
+    document.getElementById('forgotPasswordBtn').addEventListener('click', () => {
+        document.getElementById('resetPasswordModal').classList.add('active');
+    });
+    
+    // Enviar reset senha
+    document.getElementById('sendResetBtn').addEventListener('click', handleResetPassword);
+    
+    // Logout
+    document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+    
+    // Fechar modais
+    document.querySelectorAll('.modal-close').forEach(closeBtn => {
+        closeBtn.addEventListener('click', function() {
+            this.closest('.modal').classList.remove('active');
+        });
+    });
+    
+    // Fechar modal ao clicar fora
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.remove('active');
+            }
+        });
+    });
+}
+
+async function handleLogin() {
+    const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
+    const errorElement = document.getElementById('loginError');
     
     if (!email || !password) {
-        showLoginError('Por favor, preencha todos os campos');
+        showError(errorElement, 'Preencha e-mail e senha');
         return;
     }
     
     try {
-        loginBtn.innerHTML = '<span class="loading"></span> Entrando...';
-        loginBtn.disabled = true;
-        
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        
-        // Verificar se é um usuário do sistema (tem registro em /users)
-        const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
-        
-        if (!userDoc.exists()) {
-            // Se não for usuário registrado, verificar credenciais fixas
-            if (email === 'supervisor@global.com.br' || email === 'diretoria@global.com.br') {
-                // Criar registro para supervisor/diretoria se não existir
-                const userType = email === 'supervisor@global.com.br' ? 'supervisor' : 'diretoria';
-                const userName = userType === 'supervisor' ? 'Supervisor' : 'Diretoria';
-                
-                await setDoc(doc(db, 'users', userCredential.user.uid), {
-                    nome: userName,
-                    email: email,
-                    tipo: userType,
-                    criadoEm: serverTimestamp(),
-                    criadoPor: 'sistema'
-                });
-                
-                console.log(`Usuário ${userType} criado automaticamente`);
-            } else {
-                throw new Error('Usuário não autorizado. Contate o administrador.');
-            }
-        }
-        
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        console.log('Login realizado:', userCredential.user.uid);
     } catch (error) {
-        console.error('Erro no login:', error);
-        
-        let errorMessage = 'Erro ao fazer login';
-        if (error.code === 'auth/invalid-email') {
-            errorMessage = 'E-mail inválido';
-        } else if (error.code === 'auth/user-disabled') {
-            errorMessage = 'Usuário desativado';
-        } else if (error.code === 'auth/user-not-found') {
-            errorMessage = 'Usuário não encontrado';
-        } else if (error.code === 'auth/wrong-password') {
-            errorMessage = 'Senha incorreta';
-        } else if (error.code === 'auth/too-many-requests') {
-            errorMessage = 'Muitas tentativas. Tente novamente mais tarde.';
-        }
-        
-        showLoginError(errorMessage);
-    } finally {
-        loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
-        loginBtn.disabled = false;
+        console.error('Erro login:', error);
+        showError(errorElement, getAuthErrorMessage(error.code));
     }
-});
+}
 
-logoutBtn.addEventListener('click', async () => {
-    try {
-        await signOut(auth);
-    } catch (error) {
-        console.error('Erro ao sair:', error);
-        alert('Erro ao fazer logout: ' + error.message);
+function handleResetPassword() {
+    const email = document.getElementById('resetEmail').value;
+    const messageElement = document.getElementById('resetMessage');
+    
+    if (!email) {
+        messageElement.textContent = 'Digite seu e-mail';
+        messageElement.style.color = '#c33';
+        return;
     }
-});
+    
+    auth.sendPasswordResetEmail(email)
+        .then(() => {
+            messageElement.textContent = 'Link enviado! Verifique seu e-mail.';
+            messageElement.style.color = '#367C2B';
+            setTimeout(() => {
+                document.getElementById('resetPasswordModal').classList.remove('active');
+            }, 2000);
+        })
+        .catch(error => {
+            messageElement.textContent = getAuthErrorMessage(error.code);
+            messageElement.style.color = '#c33';
+        });
+}
+
+async function handleLogout() {
+    try {
+        await auth.signOut();
+    } catch (error) {
+        console.error('Erro logout:', error);
+    }
+}
 
 // ==================== GERENCIAMENTO DE USUÁRIOS ====================
-async function loadUserData(uid) {
+async function loadUserData() {
     try {
-        const userDoc = await getDoc(doc(db, 'users', uid));
+        const userRef = database.ref('users/' + currentUserId);
+        const snapshot = await userRef.once('value');
         
-        if (userDoc.exists()) {
-            currentUserData = {
-                id: uid,
-                ...userDoc.data()
-            };
+        if (snapshot.exists()) {
+            const userData = snapshot.val();
+            currentUserRole = userData.role || 'vendedor';
             
-            // Atualizar interface
-            userName.textContent = currentUserData.nome;
-            userRole.textContent = getRoleDisplayName(currentUserData.tipo);
-            
-            // Atualizar perfil
-            updateProfileInfo();
-            
-            return true;
+            // Atualizar header
+            document.getElementById('userInfo').textContent = 
+                `${userData.name || currentUser.email} (${getRoleName(currentUserRole)})`;
         } else {
-            console.error('Usuário não encontrado no Firestore');
-            await signOut(auth);
-            return false;
+            // Usuário não existe no DB, criar registro
+            currentUserRole = 'vendedor';
+            
+            // Verificar se é supervisor pelo email
+            if (currentUser.email === 'supervisor@global.com.br') {
+                currentUserRole = 'supervisor';
+            }
+            
+            await userRef.set({
+                name: currentUser.displayName || currentUser.email.split('@')[0],
+                email: currentUser.email,
+                role: currentUserRole,
+                phone: '',
+                status: 'ativo',
+                createdAt: firebase.database.ServerValue.TIMESTAMP
+            });
+            
+            document.getElementById('userInfo').textContent = 
+                `${currentUser.email.split('@')[0]} (${getRoleName(currentUserRole)})`;
         }
     } catch (error) {
-        console.error('Erro ao carregar dados do usuário:', error);
-        showLoginError('Erro ao carregar dados do usuário');
-        return false;
+        console.error('Erro carregar user:', error);
     }
 }
 
-function getRoleDisplayName(role) {
-    const roles = {
-        'vendedor': 'Vendedor',
-        'supervisor': 'Supervisor',
-        'diretoria': 'Diretoria',
-        'admin': 'Administrador'
-    };
-    return roles[role] || role;
+function getRoleName(role) {
+    return role === 'supervisor' ? 'Supervisor' : 'Vendedor';
 }
 
-function configureMenuBasedOnRole() {
-    if (!currentUserData) return;
+// ==================== NAVEGAÇÃO SPA ====================
+function setupNavigation() {
+    const navMenu = document.getElementById('navMenu');
+    navMenu.innerHTML = '';
     
-    const role = currentUserData.tipo;
+    // Itens baseados no role
+    if (currentUserRole === 'supervisor') {
+        navMenu.innerHTML = `
+            <li class="nav-item">
+                <a href="#" class="nav-link active" data-section="dashboardSupervisor">
+                    <i class="fas fa-chart-line"></i> Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" data-section="sellerRegister">
+                    <i class="fas fa-user-plus"></i> Vendedores
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" data-section="leadsList">
+                    <i class="fas fa-list"></i> Todos os Leads
+                </a>
+            </li>
+        `;
+        
+        // Carregar dashboard supervisor
+        loadDashboardSupervisor();
+        loadSellersList();
+    } else {
+        navMenu.innerHTML = `
+            <li class="nav-item">
+                <a href="#" class="nav-link active" data-section="dashboardSeller">
+                    <i class="fas fa-chart-line"></i> Meu Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" data-section="leadRegister">
+                    <i class="fas fa-plus-circle"></i> Novo Lead
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" data-section="leadsList">
+                    <i class="fas fa-list"></i> Meus Leads
+                </a>
+            </li>
+        `;
+        
+        // Carregar dashboard vendedor
+        loadDashboardSeller();
+        loadSellersForSelect();
+    }
     
-    // Esconder todos os itens primeiro
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.style.display = 'none';
+    // Configurar navegação
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Remover active de todos
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            
+            // Adicionar active ao clicado
+            this.classList.add('active');
+            const sectionId = this.getAttribute('data-section');
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Carregar dados da seção
+            switch(sectionId) {
+                case 'dashboardSupervisor':
+                    loadDashboardSupervisor();
+                    break;
+                case 'sellerRegister':
+                    loadSellersList();
+                    break;
+                case 'leadRegister':
+                    loadSellersForSelect();
+                    setupLeadForm();
+                    break;
+                case 'leadsList':
+                    loadLeadsList();
+                    setupFilters();
+                    break;
+                case 'dashboardSeller':
+                    loadDashboardSeller();
+                    break;
+            }
+        });
     });
     
-    // Mostrar perfil para todos
-    document.querySelector('.nav-item:last-child').style.display = 'block';
+    // Botão voltar
+    document.getElementById('backToList').addEventListener('click', () => {
+        document.getElementById('leadsList').classList.add('active');
+        document.getElementById('leadDetails').classList.remove('active');
+        document.querySelector('.nav-link[data-section="leadsList"]').classList.add('active');
+        document.querySelector('.nav-link[data-section="leadDetails"]')?.classList.remove('active');
+    });
+}
+
+// ==================== DASHBOARD SUPERVISOR ====================
+async function loadDashboardSupervisor() {
+    const month = parseInt(document.getElementById('dashboardMonth').value);
+    const year = parseInt(document.getElementById('dashboardYear').value);
     
-    // Mostrar itens baseado no papel
-    switch(role) {
-        case 'vendedor':
-            document.querySelector('.newlead-item').style.display = 'block';
-            document.querySelector('.leads-item').style.display = 'block';
-            break;
-            
-        case 'supervisor':
-            document.querySelector('.leads-item').style.display = 'block';
-            break;
-            
-        case 'diretoria':
-            document.querySelector('.dashboard-item').style.display = 'block';
-            document.querySelector('.leads-item').style.display = 'block';
-            document.querySelector('.admin-item').style.display = 'block';
-            break;
-    }
-}
-
-// ==================== GERENCIAMENTO DE LEADS ====================
-async function saveLead(leadData) {
     try {
-        // Obter data atual para estrutura de pastas
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
+        // Carregar leads do mês
+        const leadsRef = database.ref(`leads/${year}/${month + 1}`);
+        const snapshot = await leadsRef.once('value');
+        const leads = snapshot.val() || {};
         
-        // Gerar ID único
-        const leadId = Date.now().toString(36) + Math.random().toString(36).substr(2);
-        
-        // Preparar dados do lead
-        const lead = {
-            criadoPor: currentUser.uid,
-            vendedorNome: currentUserData.nome,
-            vendedorEmail: currentUserData.email,
-            nome: leadData.nome,
-            telefone: leadData.telefone,
-            email: leadData.email,
-            endereco: leadData.endereco,
-            temperatura: leadData.temperatura,
-            status: leadData.status,
-            dataVisitaISO: leadData.dataVisitaISO,
-            dataVisitaFormatada: leadData.dataVisitaFormatada,
-            timestampCriacao: serverTimestamp(),
-            atualizadoEm: serverTimestamp(),
-            ano: year,
-            mes: month
-        };
-        
-        // Salvar no Firestore com estrutura /leads/ano/mes/leadId
-        await setDoc(doc(db, 'leads', year.toString(), month, leadId), lead);
-        
-        return true;
-    } catch (error) {
-        console.error('Erro ao salvar lead:', error);
-        throw error;
-    }
-}
-
-async function getLeads(filters = {}) {
-    try {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        
-        // Construir query baseada nas permissões
-        let leadsRef = collection(db, 'leads', year.toString(), month);
-        let q;
-        
-        if (currentUserData.tipo === 'vendedor') {
-            // Vendedor só vê seus próprios leads
-            q = query(leadsRef, 
-                where('criadoPor', '==', currentUser.uid),
-                orderBy('timestampCriacao', 'desc')
-            );
-        } else {
-            // Supervisor e Diretoria veem todos os leads
-            q = query(leadsRef, orderBy('timestampCriacao', 'desc'));
-        }
-        
-        // Aplicar filtro de status se fornecido
-        if (filters.status && filters.status !== 'all') {
-            q = query(q, where('status', '==', filters.status));
-        }
-        
-        const querySnapshot = await getDocs(q);
-        const leads = [];
-        
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            leads.push({
-                id: doc.id,
-                ...data,
-                // Garantir que timestamp seja um objeto Date
-                timestampCriacao: data.timestampCriacao ? data.timestampCriacao.toDate() : new Date()
-            });
-        });
-        
-        return leads;
-    } catch (error) {
-        console.error('Erro ao buscar leads:', error);
-        return [];
-    }
-}
-
-async function updateLead(leadId, updates) {
-    try {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        
-        const leadRef = doc(db, 'leads', year.toString(), month, leadId);
-        await updateDoc(leadRef, {
-            ...updates,
-            atualizadoEm: serverTimestamp()
-        });
-        
-        return true;
-    } catch (error) {
-        console.error('Erro ao atualizar lead:', error);
-        throw error;
-    }
-}
-
-// ==================== DASHBOARD ====================
-async function loadDashboardData(filter = 'month') {
-    try {
-        const leads = await getLeads();
-        
-        // Aplicar filtro de data
-        const filteredLeads = filterLeadsByDate(leads, filter);
+        // Converter para array
+        const leadsArray = Object.keys(leads).map(key => ({
+            id: key,
+            ...leads[key]
+        }));
         
         // Atualizar estatísticas
-        updateStats(filteredLeads);
+        updateDashboardStats(leadsArray);
         
         // Atualizar gráficos
-        updateCharts(filteredLeads);
+        updateCharts(leadsArray);
         
-        // Atualizar tabela de leads recentes
-        updateRecentLeadsTable(filteredLeads.slice(0, 10));
+        // Atualizar tabela recentes
+        updateRecentLeadsTable(leadsArray);
         
     } catch (error) {
-        console.error('Erro ao carregar dados do dashboard:', error);
-        showMessage('leadMessage', 'Erro ao carregar dashboard: ' + error.message, 'error');
+        console.error('Erro carregar dashboard:', error);
     }
 }
 
-function filterLeadsByDate(leads, filter) {
-    const now = new Date();
+function updateDashboardStats(leads) {
+    // Total de leads
+    document.getElementById('totalLeads').textContent = leads.length;
     
-    switch(filter) {
-        case 'today':
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            return leads.filter(lead => {
-                const leadDate = new Date(lead.dataVisitaISO);
-                return leadDate >= today;
-            });
-            
-        case 'week':
-            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            return leads.filter(lead => new Date(lead.dataVisitaISO) >= weekAgo);
-            
-        case 'month':
-            const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-            return leads.filter(lead => new Date(lead.dataVisitaISO) >= monthAgo);
-            
-        default:
-            return leads;
-    }
-}
-
-function updateStats(leads) {
-    const totalLeads = leads.length;
-    const hotLeads = leads.filter(lead => lead.temperatura === 'quente').length;
+    // Taxa de conversão (ganhos / total)
     const wonLeads = leads.filter(lead => lead.status === 'ganho').length;
-    const conversionRate = totalLeads > 0 ? Math.round((wonLeads / totalLeads) * 100) : 0;
-    
-    document.getElementById('totalLeads').textContent = totalLeads.toLocaleString('pt-BR');
-    document.getElementById('hotLeads').textContent = hotLeads.toLocaleString('pt-BR');
-    document.getElementById('wonLeads').textContent = wonLeads.toLocaleString('pt-BR');
+    const conversionRate = leads.length > 0 ? Math.round((wonLeads / leads.length) * 100) : 0;
     document.getElementById('conversionRate').textContent = `${conversionRate}%`;
+    
+    // Vendedores ativos
+    const activeSellers = new Set(leads.map(lead => lead.sellerId)).size;
+    document.getElementById('activeSellers').textContent = activeSellers;
+    
+    // Negócios fechados
+    document.getElementById('wonDeals').textContent = wonLeads;
 }
 
 function updateCharts(leads) {
-    // Dados para gráfico de status
+    // Gráfico por status
     const statusData = {
-        'aberto': 0,
-        'em negociação': 0,
-        'proposta enviada': 0,
+        'novo': 0,
+        'contatado': 0,
+        'qualificado': 0,
+        'proposta': 0,
+        'negociacao': 0,
         'ganho': 0,
         'perdido': 0
     };
     
-    // Dados para gráfico de temperatura
-    const temperatureData = {
-        'frio': 0,
-        'morno': 0,
-        'quente': 0
-    };
-    
     leads.forEach(lead => {
         statusData[lead.status]++;
-        temperatureData[lead.temperatura]++;
     });
     
-    // Atualizar ou criar gráfico de status
     const statusCtx = document.getElementById('statusChart').getContext('2d');
-    
-    if (statusChart) {
-        statusChart.destroy();
-    }
+    if (statusChart) statusChart.destroy();
     
     statusChart = new Chart(statusCtx, {
         type: 'pie',
         data: {
-            labels: Object.keys(statusData).map(key => 
-                key.charAt(0).toUpperCase() + key.slice(1)
-            ),
+            labels: ['Novo', 'Contatado', 'Qualificado', 'Proposta', 'Negociação', 'Ganho', 'Perdido'],
             datasets: [{
                 data: Object.values(statusData),
                 backgroundColor: [
-                    '#4A90E2', // Aberto - Azul
-                    '#FFA726', // Em negociação - Laranja
-                    '#AB47BC', // Proposta enviada - Roxo
-                    '#66BB6A', // Ganho - Verde
-                    '#EF5350'  // Perdido - Vermelho
-                ],
-                borderWidth: 1
+                    '#4A90E2', '#FFA726', '#66BB6A', '#AB47BC', 
+                    '#FF7043', '#43A047', '#E53935'
+                ]
             }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 20
-                    }
-                }
-            }
         }
     });
     
-    // Atualizar ou criar gráfico de temperatura
-    const temperatureCtx = document.getElementById('temperatureChart').getContext('2d');
+    // Gráfico por vendedor
+    const sellerData = {};
+    leads.forEach(lead => {
+        const seller = lead.sellerName || 'Desconhecido';
+        sellerData[seller] = (sellerData[seller] || 0) + 1;
+    });
     
-    if (temperatureChart) {
-        temperatureChart.destroy();
-    }
+    const sellerCtx = document.getElementById('sellerChart').getContext('2d');
+    if (sellerChart) sellerChart.destroy();
     
-    temperatureChart = new Chart(temperatureCtx, {
-        type: 'doughnut',
+    sellerChart = new Chart(sellerCtx, {
+        type: 'bar',
         data: {
-            labels: Object.keys(temperatureData).map(key => 
-                key.charAt(0).toUpperCase() + key.slice(1)
-            ),
+            labels: Object.keys(sellerData),
             datasets: [{
-                data: Object.values(temperatureData),
-                backgroundColor: [
-                    '#4A90E2', // Frio - Azul
-                    '#FFA726', // Morno - Laranja
-                    '#EF5350'  // Quente - Vermelho
-                ],
-                borderWidth: 1
+                label: 'Leads',
+                data: Object.values(sellerData),
+                backgroundColor: '#367C2B'
             }]
         },
         options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 20
-                    }
-                }
+            scales: {
+                y: { beginAtZero: true }
             }
         }
     });
@@ -493,704 +381,647 @@ function updateCharts(leads) {
 
 function updateRecentLeadsTable(leads) {
     const tbody = document.querySelector('#recentLeadsTable tbody');
+    tbody.innerHTML = '';
+    
+    // Ordenar por data mais recente
+    const recentLeads = leads
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 10);
+    
+    recentLeads.forEach(lead => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${lead.name}</td>
+            <td>${formatPhone(lead.phone)}</td>
+            <td>${lead.city}</td>
+            <td><span class="status-tag status-${lead.status}">${lead.status}</span></td>
+            <td>${lead.sellerName || 'N/A'}</td>
+            <td>${formatDate(new Date(lead.visitDate))}</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// ==================== CADASTRO DE VENDEDORES ====================
+async function loadSellersList() {
+    try {
+        const sellersRef = database.ref('users');
+        const snapshot = await sellersRef.once('value');
+        const sellers = snapshot.val() || {};
+        
+        const tbody = document.querySelector('#sellersTable tbody');
+        tbody.innerHTML = '';
+        
+        Object.keys(sellers).forEach(userId => {
+            const seller = sellers[userId];
+            if (seller.role === 'vendedor') {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${seller.name || 'N/A'}</td>
+                    <td>${seller.email}</td>
+                    <td>${seller.phone || 'N/A'}</td>
+                    <td><span class="status-tag ${seller.status === 'ativo' ? 'status-qualificado' : 'status-perdido'}">
+                        ${seller.status || 'ativo'}
+                    </span></td>
+                    <td class="table-actions">
+                        <button class="action-btn disable" onclick="toggleSellerStatus('${userId}', '${seller.status || 'ativo'}')">
+                            <i class="fas fa-power-off"></i>
+                            ${seller.status === 'inativo' ? 'Ativar' : 'Desativar'}
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            }
+        });
+        
+        // Configurar formulário de cadastro
+        setupSellerForm();
+        
+    } catch (error) {
+        console.error('Erro carregar vendedores:', error);
+    }
+}
+
+function setupSellerForm() {
+    const form = document.getElementById('sellerForm');
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const name = document.getElementById('sellerName').value;
+        const email = document.getElementById('sellerEmail').value;
+        const phone = document.getElementById('sellerPhone').value;
+        const password = document.getElementById('sellerPassword').value;
+        
+        if (!name || !email || !phone || !password) {
+            alert('Preencha todos os campos');
+            return;
+        }
+        
+        try {
+            // Criar usuário no Firebase Auth
+            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+            
+            // Salvar no Realtime Database
+            await database.ref('users/' + userCredential.user.uid).set({
+                name: name,
+                email: email,
+                phone: phone,
+                role: 'vendedor',
+                status: 'ativo',
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                createdBy: currentUserId
+            });
+            
+            // Limpar formulário
+            form.reset();
+            
+            // Recarregar lista
+            loadSellersList();
+            
+            alert('Vendedor cadastrado com sucesso!');
+            
+        } catch (error) {
+            console.error('Erro cadastrar vendedor:', error);
+            alert(getAuthErrorMessage(error.code));
+        }
+    });
+}
+
+async function toggleSellerStatus(userId, currentStatus) {
+    const newStatus = currentStatus === 'ativo' ? 'inativo' : 'ativo';
+    
+    try {
+        await database.ref('users/' + userId + '/status').set(newStatus);
+        loadSellersList();
+    } catch (error) {
+        console.error('Erro alterar status:', error);
+        alert('Erro ao alterar status');
+    }
+}
+
+// ==================== CADASTRO DE LEADS ====================
+async function loadSellersForSelect() {
+    try {
+        const sellersRef = database.ref('users');
+        const snapshot = await sellersRef.once('value');
+        const sellers = snapshot.val() || {};
+        
+        const select = document.getElementById('leadSeller');
+        select.innerHTML = '<option value="">Selecione...</option>';
+        
+        Object.keys(sellers).forEach(userId => {
+            const seller = sellers[userId];
+            if (seller.role === 'vendedor' && seller.status !== 'inativo') {
+                const option = document.createElement('option');
+                option.value = userId;
+                option.textContent = seller.name || seller.email;
+                select.appendChild(option);
+            }
+        });
+        
+        // Se for vendedor, selecionar ele mesmo
+        if (currentUserRole === 'vendedor') {
+            select.value = currentUserId;
+            select.disabled = true;
+        }
+        
+    } catch (error) {
+        console.error('Erro carregar vendedores para select:', error);
+    }
+}
+
+function setupLeadForm() {
+    const form = document.getElementById('leadForm');
+    const visitDate = document.getElementById('leadVisitDate');
+    
+    // Definir data mínima como hoje
+    const today = new Date().toISOString().split('T')[0];
+    visitDate.min = today;
+    visitDate.value = today;
+    
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Coletar dados
+        const leadData = {
+            name: document.getElementById('leadName').value,
+            phone: document.getElementById('leadPhone').value,
+            email: document.getElementById('leadEmail').value,
+            city: document.getElementById('leadCity').value,
+            product: document.getElementById('leadProduct').value,
+            status: document.getElementById('leadStatus').value,
+            notes: document.getElementById('leadNotes').value,
+            visitDate: document.getElementById('leadVisitDate').value,
+            sellerId: document.getElementById('leadSeller').value,
+            sellerName: document.getElementById('leadSeller').options[document.getElementById('leadSeller').selectedIndex]?.textContent || '',
+            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            createdBy: currentUserId,
+            createdByName: currentUser.email.split('@')[0]
+        };
+        
+        // Validar campos obrigatórios
+        const required = ['name', 'phone', 'email', 'city', 'product', 'status', 'visitDate', 'sellerId'];
+        const missing = required.filter(field => !leadData[field]);
+        
+        if (missing.length > 0) {
+            alert(`Preencha os campos obrigatórios: ${missing.join(', ')}`);
+            return;
+        }
+        
+        try {
+            // Obter data para estrutura de pastas
+            const visitDateObj = new Date(leadData.visitDate);
+            const year = visitDateObj.getFullYear();
+            const month = visitDateObj.getMonth() + 1; // 1-12
+            
+            // Gerar ID único
+            const leadId = generateId();
+            
+            // Salvar no Realtime Database com estrutura /leads/ano/mes/id
+            await database.ref(`leads/${year}/${month}/${leadId}`).set(leadData);
+            
+            // Limpar formulário
+            form.reset();
+            visitDate.value = today;
+            
+            alert('Lead cadastrado com sucesso!');
+            
+            // Redirecionar para lista
+            document.getElementById('leadsList').classList.add('active');
+            document.getElementById('leadRegister').classList.remove('active');
+            document.querySelector('.nav-link[data-section="leadsList"]').classList.add('active');
+            document.querySelector('.nav-link[data-section="leadRegister"]').classList.remove('active');
+            
+            loadLeadsList();
+            
+        } catch (error) {
+            console.error('Erro salvar lead:', error);
+            alert('Erro ao salvar lead: ' + error.message);
+        }
+    });
+}
+
+// ==================== LISTAGEM DE LEADS ====================
+async function loadLeadsList() {
+    try {
+        // Obter data atual para buscar leads
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        
+        const leadsRef = database.ref(`leads/${year}/${month}`);
+        const snapshot = await leadsRef.once('value');
+        const leads = snapshot.val() || {};
+        
+        // Converter para array
+        let leadsArray = Object.keys(leads).map(key => ({
+            id: key,
+            year: year,
+            month: month,
+            ...leads[key]
+        }));
+        
+        // Se for vendedor, filtrar apenas seus leads
+        if (currentUserRole === 'vendedor') {
+            leadsArray = leadsArray.filter(lead => lead.sellerId === currentUserId);
+        }
+        
+        updateLeadsTable(leadsArray);
+        
+    } catch (error) {
+        console.error('Erro carregar leads:', error);
+    }
+}
+
+function setupFilters() {
+    const filterStatus = document.getElementById('filterStatus');
+    const filterCity = document.getElementById('filterCity');
+    const filterDate = document.getElementById('filterDate');
+    const clearBtn = document.getElementById('clearFilters');
+    
+    // Configurar filtros
+    [filterStatus, filterCity, filterDate].forEach(filter => {
+        filter.addEventListener('change', applyFilters);
+    });
+    
+    // Botão limpar
+    clearBtn.addEventListener('click', () => {
+        filterStatus.value = '';
+        filterCity.value = '';
+        filterDate.value = '';
+        loadLeadsList();
+    });
+}
+
+async function applyFilters() {
+    try {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        
+        const leadsRef = database.ref(`leads/${year}/${month}`);
+        const snapshot = await leadsRef.once('value');
+        const leads = snapshot.val() || {};
+        
+        // Converter para array
+        let leadsArray = Object.keys(leads).map(key => ({
+            id: key,
+            year: year,
+            month: month,
+            ...leads[key]
+        }));
+        
+        // Filtrar por role
+        if (currentUserRole === 'vendedor') {
+            leadsArray = leadsArray.filter(lead => lead.sellerId === currentUserId);
+        }
+        
+        // Aplicar filtros
+        const statusFilter = document.getElementById('filterStatus').value;
+        const cityFilter = document.getElementById('filterCity').value.toLowerCase();
+        const dateFilter = document.getElementById('filterDate').value;
+        
+        if (statusFilter) {
+            leadsArray = leadsArray.filter(lead => lead.status === statusFilter);
+        }
+        
+        if (cityFilter) {
+            leadsArray = leadsArray.filter(lead => 
+                lead.city.toLowerCase().includes(cityFilter)
+            );
+        }
+        
+        if (dateFilter) {
+            leadsArray = leadsArray.filter(lead => 
+                lead.visitDate === dateFilter
+            );
+        }
+        
+        updateLeadsTable(leadsArray);
+        
+    } catch (error) {
+        console.error('Erro aplicar filtros:', error);
+    }
+}
+
+function updateLeadsTable(leads) {
+    const tbody = document.querySelector('#leadsTable tbody');
+    tbody.innerHTML = '';
     
     if (leads.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="table-placeholder">
-                    <i class="fas fa-inbox"></i>
-                    <p>Nenhum lead encontrado</p>
+                <td colspan="8" style="text-align: center; padding: 40px;">
+                    Nenhum lead encontrado
                 </td>
             </tr>
         `;
         return;
     }
     
-    tbody.innerHTML = '';
-    
     leads.forEach(lead => {
         const row = document.createElement('tr');
-        
         row.innerHTML = `
-            <td><strong>${lead.nome}</strong></td>
-            <td>${formatPhone(lead.telefone)}</td>
-            <td><span class="temperatura-${lead.temperatura} temperatura-tag">${lead.temperatura}</span></td>
-            <td><span class="status-${lead.status.replace(' ', '-')} status-tag">${lead.status}</span></td>
-            <td>${lead.dataVisitaFormatada}</td>
-            <td>${lead.vendedorNome || 'N/A'}</td>
+            <td>${lead.name}</td>
+            <td>${formatPhone(lead.phone)}</td>
+            <td>${lead.email}</td>
+            <td>${lead.city}</td>
+            <td>${lead.product}</td>
+            <td><span class="status-tag status-${lead.status}">${lead.status}</span></td>
+            <td>${formatDate(new Date(lead.visitDate))}</td>
+            <td class="table-actions">
+                <button class="action-btn view" onclick="viewLeadDetails('${lead.id}', ${lead.year}, ${lead.month})">
+                    <i class="fas fa-eye"></i>
+                </button>
+                ${currentUserRole === 'supervisor' || lead.createdBy === currentUserId ? `
+                <button class="action-btn edit" onclick="editLead('${lead.id}', ${lead.year}, ${lead.month})">
+                    <i class="fas fa-edit"></i>
+                </button>
+                ` : ''}
+            </td>
         `;
-        
         tbody.appendChild(row);
     });
 }
 
-// ==================== FORMULÁRIO DE LEAD ====================
-function setupLeadForm() {
-    const form = document.getElementById('leadForm');
-    const visitDateInput = document.getElementById('leadVisitDate');
-    
-    // Definir data mínima como hoje
-    const today = new Date().toISOString().split('T')[0];
-    visitDateInput.min = today;
-    visitDateInput.value = today;
-    
-    // Formatar telefone enquanto digita
-    const phoneInput = document.getElementById('leadPhone');
-    phoneInput.addEventListener('input', function(e) {
-        let value = e.target.value.replace(/\D/g, '');
-        
-        if (value.length > 11) value = value.substring(0, 11);
-        
-        if (value.length > 10) {
-            value = value.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
-        } else if (value.length > 6) {
-            value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
-        } else if (value.length > 2) {
-            value = value.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
-        } else if (value.length > 0) {
-            value = value.replace(/^(\d*)/, '($1');
-        }
-        
-        e.target.value = value;
-    });
-    
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        // Coletar dados do formulário
-        const leadData = {
-            nome: document.getElementById('leadName').value.trim(),
-            telefone: document.getElementById('leadPhone').value.trim(),
-            email: document.getElementById('leadEmail').value.trim(),
-            endereco: document.getElementById('leadAddress').value.trim(),
-            temperatura: document.getElementById('leadTemperature').value,
-            status: document.getElementById('leadStatus').value
-        };
-        
-        // Validar campos obrigatórios
-        const requiredFields = ['nome', 'telefone', 'email', 'endereco', 'temperatura', 'status'];
-        const missingFields = requiredFields.filter(field => !leadData[field]);
-        
-        if (missingFields.length > 0) {
-            showMessage('leadMessage', `Por favor, preencha todos os campos obrigatórios`, 'error');
-            return;
-        }
-        
-        // Validar e-mail
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(leadData.email)) {
-            showMessage('leadMessage', 'Por favor, insira um e-mail válido', 'error');
-            return;
-        }
-        
-        // Validar telefone
-        const phoneDigits = leadData.telefone.replace(/\D/g, '');
-        if (phoneDigits.length < 10) {
-            showMessage('leadMessage', 'Por favor, insira um telefone válido', 'error');
-            return;
-        }
-        
-        // Validar data
-        const visitDate = new Date(document.getElementById('leadVisitDate').value);
-        const todayObj = new Date();
-        todayObj.setHours(0, 0, 0, 0);
-        
-        if (visitDate < todayObj) {
-            showMessage('leadMessage', 'A data da visita não pode ser no passado', 'error');
-            return;
-        }
-        
-        try {
-            // Formatar data
-            const formattedDate = formatDate(visitDate);
-            
-            // Adicionar dados de data ao lead
-            leadData.dataVisitaISO = visitDate.toISOString();
-            leadData.dataVisitaFormatada = formattedDate;
-            
-            // Desabilitar botão durante o salvamento
-            const submitBtn = form.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<span class="loading"></span> Salvando...';
-            submitBtn.disabled = true;
-            
-            // Salvar lead
-            await saveLead(leadData);
-            
-            // Limpar formulário
-            form.reset();
-            visitDateInput.value = today;
-            
-            // Mostrar mensagem de sucesso
-            showMessage('leadMessage', 'Lead cadastrado com sucesso!', 'success');
-            
-            // Atualizar listas
-            if (document.getElementById('leads').classList.contains('active')) {
-                await loadLeadsTable();
-            }
-            
-            if (document.getElementById('dashboard').classList.contains('active')) {
-                await loadDashboardData(document.getElementById('dashboardFilter').value);
-            }
-            
-        } catch (error) {
-            console.error('Erro ao salvar lead:', error);
-            showMessage('leadMessage', 'Erro ao salvar lead: ' + error.message, 'error');
-        } finally {
-            // Reabilitar botão
-            const submitBtn = form.querySelector('button[type="submit"]');
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-        }
-    });
-}
-
-// ==================== TABELA DE LEADS ====================
-async function loadLeadsTable() {
+// ==================== DETALHES E EDIÇÃO DE LEADS ====================
+async function viewLeadDetails(leadId, year, month) {
     try {
-        const filter = document.getElementById('leadsFilter').value;
-        const leads = await getLeads({ status: filter });
-        const tbody = document.querySelector('#leadsTable tbody');
+        const leadRef = database.ref(`leads/${year}/${month}/${leadId}`);
+        const snapshot = await leadRef.once('value');
+        const lead = snapshot.val();
         
-        if (leads.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="7" class="table-placeholder">
-                        <i class="fas fa-inbox"></i>
-                        <p>Nenhum lead encontrado</p>
-                    </td>
-                </tr>
-            `;
+        if (!lead) {
+            alert('Lead não encontrado');
             return;
         }
         
-        tbody.innerHTML = '';
+        // Exibir detalhes
+        const detailsContent = document.getElementById('leadDetailsContent');
+        detailsContent.innerHTML = `
+            <div class="detail-item">
+                <h4>Informações do Lead</h4>
+                <p><strong>Nome:</strong> ${lead.name}</p>
+                <p><strong>Telefone:</strong> ${formatPhone(lead.phone)}</p>
+                <p><strong>E-mail:</strong> ${lead.email}</p>
+                <p><strong>Cidade:</strong> ${lead.city}</p>
+                <p><strong>Produto:</strong> ${lead.product}</p>
+                <p><strong>Status:</strong> <span class="status-tag status-${lead.status}">${lead.status}</span></p>
+            </div>
+            
+            <div class="detail-item">
+                <h4>Visita e Vendedor</h4>
+                <p><strong>Data da Visita:</strong> ${formatDate(new Date(lead.visitDate))}</p>
+                <p><strong>Vendedor:</strong> ${lead.sellerName || 'N/A'}</p>
+                <p><strong>Cadastrado por:</strong> ${lead.createdByName || 'N/A'}</p>
+                <p><strong>Data cadastro:</strong> ${formatDate(new Date(lead.createdAt))}</p>
+            </div>
+            
+            <div class="detail-item">
+                <h4>Observações</h4>
+                <p>${lead.notes || 'Nenhuma observação registrada.'}</p>
+            </div>
+        `;
         
-        leads.forEach(lead => {
-            const row = document.createElement('tr');
-            
-            row.innerHTML = `
-                <td><strong>${lead.nome}</strong></td>
-                <td>${formatPhone(lead.telefone)}</td>
-                <td>${lead.email}</td>
-                <td><span class="temperatura-${lead.temperatura} temperatura-tag">${lead.temperatura}</span></td>
-                <td><span class="status-${lead.status.replace(' ', '-')} status-tag">${lead.status}</span></td>
-                <td>${lead.dataVisitaFormatada}</td>
-                <td class="table-actions">
-                    ${currentUserData.tipo !== 'vendedor' ? 
-                        `<button class="btn btn-sm btn-secondary" onclick="editLead('${lead.id}')">
-                            <i class="fas fa-edit"></i> Editar
-                        </button>` : 
-                        `<span class="text-muted">Somente leitura</span>`
-                    }
-                </td>
-            `;
-            
-            tbody.appendChild(row);
-        });
+        // Navegar para detalhes
+        document.getElementById('leadsList').classList.remove('active');
+        document.getElementById('leadDetails').classList.add('active');
+        
+        // Atualizar navegação
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
         
     } catch (error) {
-        console.error('Erro ao carregar tabela de leads:', error);
-        const tbody = document.querySelector('#leadsTable tbody');
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="7" class="table-placeholder">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <p>Erro ao carregar leads: ${error.message}</p>
-                </td>
-            </tr>
-        `;
+        console.error('Erro carregar detalhes:', error);
+        alert('Erro ao carregar detalhes do lead');
     }
 }
 
-// ==================== ADMINISTRAÇÃO ====================
-function setupAdminForm() {
-    const form = document.getElementById('adminForm');
-    
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const name = document.getElementById('adminName').value.trim();
-        const email = document.getElementById('adminEmail').value.trim().toLowerCase();
-        const password = document.getElementById('adminPassword').value;
-        const confirmPassword = document.getElementById('adminConfirmPassword').value;
-        
-        // Validações
-        if (!name || !email || !password || !confirmPassword) {
-            showMessage('adminMessage', 'Por favor, preencha todos os campos', 'error');
-            return;
-        }
-        
-        if (password !== confirmPassword) {
-            showMessage('adminMessage', 'As senhas não coincidem', 'error');
-            return;
-        }
-        
-        if (password.length < 6) {
-            showMessage('adminMessage', 'A senha deve ter no mínimo 6 caracteres', 'error');
-            return;
-        }
-        
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            showMessage('adminMessage', 'Por favor, insira um e-mail válido', 'error');
-            return;
-        }
-        
-        try {
-            // Desabilitar botão durante a criação
-            const submitBtn = form.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<span class="loading"></span> Criando...';
-            submitBtn.disabled = true;
-            
-            // Criar usuário no Firebase Auth
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            
-            // Salvar dados no Firestore
-            await setDoc(doc(db, 'users', userCredential.user.uid), {
-                nome: name,
-                email: email,
-                tipo: 'vendedor',
-                criadoPor: currentUser.uid,
-                criadoPorNome: currentUserData.nome,
-                criadoEm: serverTimestamp()
-            });
-            
-            // Limpar formulário
-            form.reset();
-            
-            // Mostrar mensagem de sucesso
-            showMessage('adminMessage', 'Vendedor criado com sucesso!', 'success');
-            
-            // Atualizar lista de usuários
-            await loadUsersList();
-            
-        } catch (error) {
-            console.error('Erro ao criar vendedor:', error);
-            
-            let errorMessage = 'Erro ao criar vendedor';
-            if (error.code === 'auth/email-already-in-use') {
-                errorMessage = 'Este e-mail já está em uso';
-            } else if (error.code === 'auth/invalid-email') {
-                errorMessage = 'E-mail inválido';
-            } else if (error.code === 'auth/weak-password') {
-                errorMessage = 'A senha é muito fraca';
-            }
-            
-            showMessage('adminMessage', errorMessage, 'error');
-        } finally {
-            // Reabilitar botão
-            const submitBtn = form.querySelector('button[type="submit"]');
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-        }
-    });
-}
-
-async function loadUsersList() {
+async function editLead(leadId, year, month) {
     try {
-        const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('tipo', '==', 'vendedor'));
-        const querySnapshot = await getDocs(q);
+        const leadRef = database.ref(`leads/${year}/${month}/${leadId}`);
+        const snapshot = await leadRef.once('value');
+        const lead = snapshot.val();
         
-        const tbody = document.querySelector('#usersTable tbody');
-        
-        if (querySnapshot.empty) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="4" class="table-placeholder">
-                        <i class="fas fa-users"></i>
-                        <p>Nenhum vendedor cadastrado</p>
-                    </td>
-                </tr>
-            `;
+        if (!lead) {
+            alert('Lead não encontrado');
             return;
         }
         
-        tbody.innerHTML = '';
+        // Preencher formulário de edição
+        document.getElementById('editLeadId').value = leadId;
+        document.getElementById('editLeadYear').value = year;
+        document.getElementById('editLeadMonth').value = month;
+        document.getElementById('editLeadStatus').value = lead.status;
+        document.getElementById('editLeadNotes').value = lead.notes || '';
         
-        querySnapshot.forEach((doc) => {
-            const user = doc.data();
-            const row = document.createElement('tr');
-            
-            row.innerHTML = `
-                <td><strong>${user.nome}</strong></td>
-                <td>${user.email}</td>
-                <td><span class="badge badge-info">${getRoleDisplayName(user.tipo)}</span></td>
-                <td>${user.criadoEm ? formatFirebaseDate(user.criadoEm) : 'N/A'}</td>
-            `;
-            
-            tbody.appendChild(row);
-        });
+        // Mostrar modal
+        document.getElementById('editLeadModal').classList.add('active');
         
     } catch (error) {
-        console.error('Erro ao carregar lista de usuários:', error);
-        const tbody = document.querySelector('#usersTable tbody');
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="4" class="table-placeholder">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <p>Erro ao carregar vendedores</p>
-                </td>
-            </tr>
-        `;
+        console.error('Erro editar lead:', error);
+        alert('Erro ao carregar lead para edição');
     }
 }
 
-// ==================== PERFIL E SENHA ====================
-function updateProfileInfo() {
-    if (!currentUserData) return;
+// Configurar formulário de edição
+document.getElementById('editLeadForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
     
-    document.getElementById('profileName').textContent = currentUserData.nome;
-    document.getElementById('profileEmail').textContent = currentUserData.email;
-    document.getElementById('profileRole').textContent = getRoleDisplayName(currentUserData.tipo);
+    const leadId = document.getElementById('editLeadId').value;
+    const year = parseInt(document.getElementById('editLeadYear').value);
+    const month = parseInt(document.getElementById('editLeadMonth').value);
+    const status = document.getElementById('editLeadStatus').value;
+    const notes = document.getElementById('editLeadNotes').value;
     
-    if (currentUser.metadata.creationTime) {
-        const creationDate = new Date(currentUser.metadata.creationTime);
-        document.getElementById('profileSince').textContent = `Membro desde: ${formatDate(creationDate)}`;
-    }
-}
-
-function setupPasswordChangeForm() {
-    const form = document.getElementById('changePasswordForm');
-    
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const currentPassword = document.getElementById('currentPassword').value;
-        const newPassword = document.getElementById('newPassword').value;
-        const confirmNewPassword = document.getElementById('confirmNewPassword').value;
-        
-        // Validações
-        if (!currentPassword || !newPassword || !confirmNewPassword) {
-            showMessage('passwordMessage', 'Por favor, preencha todos os campos', 'error');
-            return;
-        }
-        
-        if (newPassword !== confirmNewPassword) {
-            showMessage('passwordMessage', 'As novas senhas não coincidem', 'error');
-            return;
-        }
-        
-        if (newPassword.length < 6) {
-            showMessage('passwordMessage', 'A nova senha deve ter no mínimo 6 caracteres', 'error');
-            return;
-        }
-        
-        try {
-            // Desabilitar botão durante a alteração
-            const submitBtn = form.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<span class="loading"></span> Alterando...';
-            submitBtn.disabled = true;
-            
-            // Reautenticar usuário
-            const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
-            await reauthenticateWithCredential(currentUser, credential);
-            
-            // Atualizar senha
-            await updatePassword(currentUser, newPassword);
-            
-            // Limpar formulário
-            form.reset();
-            
-            // Mostrar mensagem de sucesso
-            showMessage('passwordMessage', 'Senha alterada com sucesso!', 'success');
-            
-        } catch (error) {
-            console.error('Erro ao alterar senha:', error);
-            
-            let errorMessage = 'Erro ao alterar senha';
-            if (error.code === 'auth/wrong-password') {
-                errorMessage = 'Senha atual incorreta';
-            } else if (error.code === 'auth/weak-password') {
-                errorMessage = 'A nova senha é muito fraca';
-            } else if (error.code === 'auth/requires-recent-login') {
-                errorMessage = 'Por favor, faça login novamente antes de alterar a senha';
-            }
-            
-            showMessage('passwordMessage', errorMessage, 'error');
-        } finally {
-            // Reabilitar botão
-            const submitBtn = form.querySelector('button[type="submit"]');
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-        }
-    });
-}
-
-// ==================== MODAL DE EDIÇÃO ====================
-window.editLead = async function(leadId) {
     try {
+        const leadRef = database.ref(`leads/${year}/${month}/${leadId}`);
+        
+        // Atualizar apenas status e notas
+        await leadRef.update({
+            status: status,
+            notes: notes,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP,
+            updatedBy: currentUserId
+        });
+        
+        // Fechar modal
+        document.getElementById('editLeadModal').classList.remove('active');
+        
+        // Recarregar listas
+        loadLeadsList();
+        if (currentUserRole === 'supervisor') {
+            loadDashboardSupervisor();
+        } else {
+            loadDashboardSeller();
+        }
+        
+        alert('Lead atualizado com sucesso!');
+        
+    } catch (error) {
+        console.error('Erro atualizar lead:', error);
+        alert('Erro ao atualizar lead');
+    }
+});
+
+// ==================== DASHBOARD VENDEDOR ====================
+async function loadDashboardSeller() {
+    try {
+        // Obter data atual
         const now = new Date();
         const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const month = now.getMonth() + 1;
         
-        const leadDoc = await getDoc(doc(db, 'leads', year.toString(), month, leadId));
+        const leadsRef = database.ref(`leads/${year}/${month}`);
+        const snapshot = await leadsRef.once('value');
+        const leads = snapshot.val() || {};
         
-        if (leadDoc.exists()) {
-            const lead = leadDoc.data();
-            
-            document.getElementById('editLeadId').value = leadId;
-            document.getElementById('editTemperature').value = lead.temperatura;
-            document.getElementById('editStatus').value = lead.status;
-            
-            // Mostrar modal
-            document.getElementById('editLeadModal').classList.add('active');
-        }
+        // Converter para array e filtrar por vendedor
+        let leadsArray = Object.keys(leads).map(key => ({
+            id: key,
+            ...leads[key]
+        })).filter(lead => lead.sellerId === currentUserId);
+        
+        // Atualizar estatísticas
+        updateSellerStats(leadsArray);
+        
+        // Atualizar gráficos
+        updateSellerCharts(leadsArray);
+        
     } catch (error) {
-        console.error('Erro ao carregar lead para edição:', error);
-        alert('Erro ao carregar lead: ' + error.message);
+        console.error('Erro carregar dashboard vendedor:', error);
     }
-};
+}
 
-// Configurar modal de edição
-function setupEditModal() {
-    const modal = document.getElementById('editLeadModal');
-    const closeBtn = modal.querySelector('.modal-close');
-    const form = document.getElementById('editLeadForm');
+function updateSellerStats(leads) {
+    // Total de leads
+    document.getElementById('myTotalLeads').textContent = leads.length;
     
-    // Fechar modal
-    closeBtn.addEventListener('click', () => {
-        modal.classList.remove('active');
+    // Leads qualificados
+    const qualified = leads.filter(lead => 
+        lead.status === 'qualificado' || lead.status === 'proposta' || lead.status === 'negociacao'
+    ).length;
+    document.getElementById('myQualifiedLeads').textContent = qualified;
+    
+    // Leads ganhos
+    const won = leads.filter(lead => lead.status === 'ganho').length;
+    document.getElementById('myWonLeads').textContent = won;
+    
+    // Taxa de conversão
+    const conversion = leads.length > 0 ? Math.round((won / leads.length) * 100) : 0;
+    document.getElementById('myConversion').textContent = `${conversion}%`;
+}
+
+function updateSellerCharts(leads) {
+    // Gráfico por status
+    const statusData = {
+        'novo': 0,
+        'contatado': 0,
+        'qualificado': 0,
+        'proposta': 0,
+        'negociacao': 0,
+        'ganho': 0,
+        'perdido': 0
+    };
+    
+    leads.forEach(lead => {
+        statusData[lead.status]++;
     });
     
-    // Fechar ao clicar fora
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.classList.remove('active');
+    const myStatusCtx = document.getElementById('myStatusChart').getContext('2d');
+    if (myStatusChart) myStatusChart.destroy();
+    
+    myStatusChart = new Chart(myStatusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Novo', 'Contatado', 'Qualificado', 'Proposta', 'Negociação', 'Ganho', 'Perdido'],
+            datasets: [{
+                data: Object.values(statusData),
+                backgroundColor: [
+                    '#4A90E2', '#FFA726', '#66BB6A', '#AB47BC', 
+                    '#FF7043', '#43A047', '#E53935'
+                ]
+            }]
         }
     });
     
-    // Submeter edição
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const leadId = document.getElementById('editLeadId').value;
-        const temperatura = document.getElementById('editTemperature').value;
-        const status = document.getElementById('editStatus').value;
-        
-        try {
-            // Desabilitar botão durante a atualização
-            const submitBtn = form.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<span class="loading"></span> Salvando...';
-            submitBtn.disabled = true;
-            
-            await updateLead(leadId, { temperatura, status });
-            
-            // Fechar modal
-            modal.classList.remove('active');
-            
-            // Atualizar tabelas
-            await loadLeadsTable();
-            await loadDashboardData(document.getElementById('dashboardFilter').value);
-            
-            showMessage('leadMessage', 'Lead atualizado com sucesso!', 'success');
-            
-        } catch (error) {
-            console.error('Erro ao atualizar lead:', error);
-            alert('Erro ao atualizar lead: ' + error.message);
-        } finally {
-            // Reabilitar botão
-            const submitBtn = form.querySelector('button[type="submit"]');
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
+    // Gráfico por cidade
+    const cityData = {};
+    leads.forEach(lead => {
+        cityData[lead.city] = (cityData[lead.city] || 0) + 1;
+    });
+    
+    const myCityCtx = document.getElementById('myCityChart').getContext('2d');
+    if (myCityChart) myCityChart.destroy();
+    
+    myCityChart = new Chart(myCityCtx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(cityData),
+            datasets: [{
+                label: 'Leads por Cidade',
+                data: Object.values(cityData),
+                backgroundColor: '#367C2B'
+            }]
+        },
+        options: {
+            scales: {
+                y: { beginAtZero: true }
+            }
         }
     });
 }
 
 // ==================== UTILITÁRIOS ====================
-function formatDate(date) {
-    return date.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
+function showLoginScreen() {
+    document.getElementById('loginScreen').classList.add('active');
+    document.getElementById('mainScreen').classList.remove('active');
 }
 
-function formatFirebaseDate(timestamp) {
-    if (!timestamp) return 'N/A';
-    
-    try {
-        const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-        return formatDate(date);
-    } catch (error) {
-        return 'Data inválida';
-    }
+function showMainScreen() {
+    document.getElementById('loginScreen').classList.remove('active');
+    document.getElementById('mainScreen').classList.add('active');
 }
 
-function formatPhone(phone) {
-    if (!phone) return 'N/A';
-    
-    // Remover todos os não dígitos
-    const cleaned = phone.replace(/\D/g, '');
-    
-    if (cleaned.length === 11) {
-        return `(${cleaned.substring(0, 2)}) ${cleaned.substring(2, 7)}-${cleaned.substring(7)}`;
-    } else if (cleaned.length === 10) {
-        return `(${cleaned.substring(0, 2)}) ${cleaned.substring(2, 6)}-${cleaned.substring(6)}`;
-    } else if (cleaned.length > 0) {
-        return phone;
-    }
-    
-    return 'N/A';
-}
-
-function showLoginError(message) {
-    loginError.textContent = message;
-    loginError.style.display = 'block';
-    loginError.className = 'error-message';
-    
-    // Esconder após 5 segundos
-    setTimeout(() => {
-        loginError.style.display = 'none';
-    }, 5000);
-}
-
-function showMessage(elementId, message, type = 'success') {
-    const element = document.getElementById(elementId);
+function showError(element, message) {
     element.textContent = message;
     element.style.display = 'block';
-    element.className = type === 'success' ? 'success-message' : 'error-message';
-    
-    // Esconder após 5 segundos
     setTimeout(() => {
         element.style.display = 'none';
     }, 5000);
 }
 
-// ==================== CONTROLE DE TELAS ====================
-function showLoginScreen() {
-    loginScreen.classList.add('active');
-    mainScreen.classList.remove('active');
-    document.title = 'Global - Funil de Vendas';
+function getAuthErrorMessage(code) {
+    const messages = {
+        'auth/invalid-email': 'E-mail inválido',
+        'auth/user-disabled': 'Usuário desativado',
+        'auth/user-not-found': 'Usuário não encontrado',
+        'auth/wrong-password': 'Senha incorreta',
+        'auth/email-already-in-use': 'E-mail já cadastrado',
+        'auth/weak-password': 'Senha muito fraca',
+        'auth/too-many-requests': 'Muitas tentativas. Tente mais tarde.'
+    };
+    return messages[code] || 'Erro na autenticação';
 }
 
-function showMainScreen() {
-    loginScreen.classList.remove('active');
-    mainScreen.classList.add('active');
+function formatDate(date) {
+    return date.toLocaleDateString('pt-BR');
 }
 
-function redirectBasedOnRole() {
-    if (!currentUserData) return;
-    
-    const role = currentUserData.tipo;
-    
-    // Remover active de todas as seções
-    document.querySelectorAll('.content-section').forEach(section => {
-        section.classList.remove('active');
-    });
-    
-    document.querySelectorAll('.nav-link').forEach(link => {
-        link.classList.remove('active');
-    });
-    
-    // Redirecionar baseado no papel
-    let targetSection = 'profile';
-    let targetLink = '[data-section="profile"]';
-    
-    switch(role) {
-        case 'vendedor':
-            targetSection = 'newLead';
-            targetLink = '[data-section="newLead"]';
-            break;
-        case 'supervisor':
-            targetSection = 'leads';
-            targetLink = '[data-section="leads"]';
-            break;
-        case 'diretoria':
-            targetSection = 'dashboard';
-            targetLink = '[data-section="dashboard"]';
-            break;
+function formatPhone(phone) {
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 11) {
+        return cleaned.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
+    } else if (cleaned.length === 10) {
+        return cleaned.replace(/^(\d{2})(\d{4})(\d{4}).*/, '($1) $2-$3');
     }
-    
-    // Ativar seção e link correspondentes
-    const sectionElement = document.getElementById(targetSection);
-    const linkElement = document.querySelector(targetLink);
-    
-    if (sectionElement && linkElement) {
-        sectionElement.classList.add('active');
-        linkElement.classList.add('active');
-    }
-    
-    // Atualizar título da página
-    if (sectionElement) {
-        const sectionTitle = sectionElement.querySelector('h2');
-        if (sectionTitle) {
-            document.title = `Global - ${sectionTitle.textContent.replace(/[^a-zA-Z0-9\s]/g, '').trim()}`;
-        }
-    }
+    return phone;
 }
 
-// ==================== SETUP EVENT LISTENERS ====================
-function setupEventListeners() {
-    // Filtro do dashboard
-    document.getElementById('dashboardFilter').addEventListener('change', (e) => {
-        loadDashboardData(e.target.value);
-    });
-    
-    // Filtro da lista de leads
-    document.getElementById('leadsFilter').addEventListener('change', () => {
-        loadLeadsTable();
-    });
-    
-    // Botão de exportar (simulado)
-    document.getElementById('exportLeadsBtn').addEventListener('click', () => {
-        alert('Funcionalidade de exportação será implementada em breve!');
-    });
-    
-    // Formulários
-    setupLeadForm();
-    setupAdminForm();
-    setupPasswordChangeForm();
-    setupEditModal();
-    
-    // Navegação
-    setupNavigation();
+function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
 }
 
-function setupNavigation() {
-    const navLinks = document.querySelectorAll('.nav-link');
-    
-    navLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            const sectionId = this.getAttribute('data-section');
-            
-            // Remove active class from all links and sections
-            navLinks.forEach(l => l.classList.remove('active'));
-            document.querySelectorAll('.content-section').forEach(section => {
-                section.classList.remove('active');
-            });
-            
-            // Add active class to clicked link and corresponding section
-            this.classList.add('active');
-            document.getElementById(sectionId).classList.add('active');
-            
-            // Atualizar título da página
-            const sectionTitle = document.querySelector(`#${sectionId} h2`);
-            if (sectionTitle) {
-                document.title = `Global - ${sectionTitle.textContent.replace(/[^a-zA-Z0-9\s]/g, '').trim()}`;
-            }
-            
-            // Carregar dados da seção se necessário
-            switch(sectionId) {
-                case 'dashboard':
-                    loadDashboardData(document.getElementById('dashboardFilter').value);
-                    break;
-                case 'leads':
-                    loadLeadsTable();
-                    break;
-                case 'admin':
-                    loadUsersList();
-                    break;
-            }
-        });
-    });
-}
-
-// Exportar funções para uso no HTML
-window.editLead = window.editLead;
+// ==================== EXPORT FUNCTIONS ====================
+window.toggleSellerStatus = toggleSellerStatus;
+window.viewLeadDetails = viewLeadDetails;
+window.editLead = editLead;
