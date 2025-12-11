@@ -71,6 +71,9 @@ async function initApp() {
             showMainScreen();
             setupEventListeners();
             
+            // Configurar menu baseado no papel
+            configureMenuBasedOnRole();
+            
             // Redirecionar baseado no tipo de usuário
             redirectBasedOnRole();
         } else {
@@ -84,11 +87,11 @@ async function initApp() {
 loginBtn.addEventListener('click', async (e) => {
     e.preventDefault();
     
-    const email = document.getElementById('email').value;
+    const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
     
     if (!email || !password) {
-        showError('Por favor, preencha todos os campos');
+        showLoginError('Por favor, preencha todos os campos');
         return;
     }
     
@@ -106,20 +109,39 @@ loginBtn.addEventListener('click', async (e) => {
             if (email === 'supervisor@global.com.br' || email === 'diretoria@global.com.br') {
                 // Criar registro para supervisor/diretoria se não existir
                 const userType = email === 'supervisor@global.com.br' ? 'supervisor' : 'diretoria';
+                const userName = userType === 'supervisor' ? 'Supervisor' : 'Diretoria';
+                
                 await setDoc(doc(db, 'users', userCredential.user.uid), {
-                    nome: userType === 'supervisor' ? 'Supervisor' : 'Diretoria',
+                    nome: userName,
                     email: email,
                     tipo: userType,
-                    criadoEm: serverTimestamp()
+                    criadoEm: serverTimestamp(),
+                    criadoPor: 'sistema'
                 });
+                
+                console.log(`Usuário ${userType} criado automaticamente`);
             } else {
-                throw new Error('Usuário não autorizado');
+                throw new Error('Usuário não autorizado. Contate o administrador.');
             }
         }
         
     } catch (error) {
         console.error('Erro no login:', error);
-        showError(error.message);
+        
+        let errorMessage = 'Erro ao fazer login';
+        if (error.code === 'auth/invalid-email') {
+            errorMessage = 'E-mail inválido';
+        } else if (error.code === 'auth/user-disabled') {
+            errorMessage = 'Usuário desativado';
+        } else if (error.code === 'auth/user-not-found') {
+            errorMessage = 'Usuário não encontrado';
+        } else if (error.code === 'auth/wrong-password') {
+            errorMessage = 'Senha incorreta';
+        } else if (error.code === 'auth/too-many-requests') {
+            errorMessage = 'Muitas tentativas. Tente novamente mais tarde.';
+        }
+        
+        showLoginError(errorMessage);
     } finally {
         loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
         loginBtn.disabled = false;
@@ -131,6 +153,7 @@ logoutBtn.addEventListener('click', async () => {
         await signOut(auth);
     } catch (error) {
         console.error('Erro ao sair:', error);
+        alert('Erro ao fazer logout: ' + error.message);
     }
 });
 
@@ -140,25 +163,28 @@ async function loadUserData(uid) {
         const userDoc = await getDoc(doc(db, 'users', uid));
         
         if (userDoc.exists()) {
-            currentUserData = userDoc.data();
+            currentUserData = {
+                id: uid,
+                ...userDoc.data()
+            };
             
             // Atualizar interface
             userName.textContent = currentUserData.nome;
             userRole.textContent = getRoleDisplayName(currentUserData.tipo);
             
-            // Mostrar/ocultar menu admin
-            const adminMenu = document.querySelector('.admin-only');
-            if (currentUserData.tipo === 'diretoria') {
-                adminMenu.style.display = 'block';
-            } else {
-                adminMenu.style.display = 'none';
-            }
-            
             // Atualizar perfil
             updateProfileInfo();
+            
+            return true;
+        } else {
+            console.error('Usuário não encontrado no Firestore');
+            await signOut(auth);
+            return false;
         }
     } catch (error) {
         console.error('Erro ao carregar dados do usuário:', error);
+        showLoginError('Erro ao carregar dados do usuário');
+        return false;
     }
 }
 
@@ -170,6 +196,38 @@ function getRoleDisplayName(role) {
         'admin': 'Administrador'
     };
     return roles[role] || role;
+}
+
+function configureMenuBasedOnRole() {
+    if (!currentUserData) return;
+    
+    const role = currentUserData.tipo;
+    
+    // Esconder todos os itens primeiro
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.style.display = 'none';
+    });
+    
+    // Mostrar perfil para todos
+    document.querySelector('.nav-item:last-child').style.display = 'block';
+    
+    // Mostrar itens baseado no papel
+    switch(role) {
+        case 'vendedor':
+            document.querySelector('.newlead-item').style.display = 'block';
+            document.querySelector('.leads-item').style.display = 'block';
+            break;
+            
+        case 'supervisor':
+            document.querySelector('.leads-item').style.display = 'block';
+            break;
+            
+        case 'diretoria':
+            document.querySelector('.dashboard-item').style.display = 'block';
+            document.querySelector('.leads-item').style.display = 'block';
+            document.querySelector('.admin-item').style.display = 'block';
+            break;
+    }
 }
 
 // ==================== GERENCIAMENTO DE LEADS ====================
@@ -187,6 +245,7 @@ async function saveLead(leadData) {
         const lead = {
             criadoPor: currentUser.uid,
             vendedorNome: currentUserData.nome,
+            vendedorEmail: currentUserData.email,
             nome: leadData.nome,
             telefone: leadData.telefone,
             email: leadData.email,
@@ -196,7 +255,9 @@ async function saveLead(leadData) {
             dataVisitaISO: leadData.dataVisitaISO,
             dataVisitaFormatada: leadData.dataVisitaFormatada,
             timestampCriacao: serverTimestamp(),
-            atualizadoEm: serverTimestamp()
+            atualizadoEm: serverTimestamp(),
+            ano: year,
+            mes: month
         };
         
         // Salvar no Firestore com estrutura /leads/ano/mes/leadId
@@ -221,7 +282,10 @@ async function getLeads(filters = {}) {
         
         if (currentUserData.tipo === 'vendedor') {
             // Vendedor só vê seus próprios leads
-            q = query(leadsRef, where('criadoPor', '==', currentUser.uid));
+            q = query(leadsRef, 
+                where('criadoPor', '==', currentUser.uid),
+                orderBy('timestampCriacao', 'desc')
+            );
         } else {
             // Supervisor e Diretoria veem todos os leads
             q = query(leadsRef, orderBy('timestampCriacao', 'desc'));
@@ -236,9 +300,12 @@ async function getLeads(filters = {}) {
         const leads = [];
         
         querySnapshot.forEach((doc) => {
+            const data = doc.data();
             leads.push({
                 id: doc.id,
-                ...doc.data()
+                ...data,
+                // Garantir que timestamp seja um objeto Date
+                timestampCriacao: data.timestampCriacao ? data.timestampCriacao.toDate() : new Date()
             });
         });
         
@@ -287,6 +354,7 @@ async function loadDashboardData(filter = 'month') {
         
     } catch (error) {
         console.error('Erro ao carregar dados do dashboard:', error);
+        showMessage('leadMessage', 'Erro ao carregar dashboard: ' + error.message, 'error');
     }
 }
 
@@ -295,10 +363,10 @@ function filterLeadsByDate(leads, filter) {
     
     switch(filter) {
         case 'today':
-            const today = now.toDateString();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             return leads.filter(lead => {
-                const leadDate = new Date(lead.dataVisitaISO).toDateString();
-                return leadDate === today;
+                const leadDate = new Date(lead.dataVisitaISO);
+                return leadDate >= today;
             });
             
         case 'week':
@@ -320,9 +388,9 @@ function updateStats(leads) {
     const wonLeads = leads.filter(lead => lead.status === 'ganho').length;
     const conversionRate = totalLeads > 0 ? Math.round((wonLeads / totalLeads) * 100) : 0;
     
-    document.getElementById('totalLeads').textContent = totalLeads;
-    document.getElementById('hotLeads').textContent = hotLeads;
-    document.getElementById('wonLeads').textContent = wonLeads;
+    document.getElementById('totalLeads').textContent = totalLeads.toLocaleString('pt-BR');
+    document.getElementById('hotLeads').textContent = hotLeads.toLocaleString('pt-BR');
+    document.getElementById('wonLeads').textContent = wonLeads.toLocaleString('pt-BR');
     document.getElementById('conversionRate').textContent = `${conversionRate}%`;
 }
 
@@ -358,7 +426,9 @@ function updateCharts(leads) {
     statusChart = new Chart(statusCtx, {
         type: 'pie',
         data: {
-            labels: Object.keys(statusData),
+            labels: Object.keys(statusData).map(key => 
+                key.charAt(0).toUpperCase() + key.slice(1)
+            ),
             datasets: [{
                 data: Object.values(statusData),
                 backgroundColor: [
@@ -375,7 +445,10 @@ function updateCharts(leads) {
             responsive: true,
             plugins: {
                 legend: {
-                    position: 'bottom'
+                    position: 'bottom',
+                    labels: {
+                        padding: 20
+                    }
                 }
             }
         }
@@ -391,7 +464,9 @@ function updateCharts(leads) {
     temperatureChart = new Chart(temperatureCtx, {
         type: 'doughnut',
         data: {
-            labels: Object.keys(temperatureData),
+            labels: Object.keys(temperatureData).map(key => 
+                key.charAt(0).toUpperCase() + key.slice(1)
+            ),
             datasets: [{
                 data: Object.values(temperatureData),
                 backgroundColor: [
@@ -406,7 +481,10 @@ function updateCharts(leads) {
             responsive: true,
             plugins: {
                 legend: {
-                    position: 'bottom'
+                    position: 'bottom',
+                    labels: {
+                        padding: 20
+                    }
                 }
             }
         }
@@ -415,15 +493,28 @@ function updateCharts(leads) {
 
 function updateRecentLeadsTable(leads) {
     const tbody = document.querySelector('#recentLeadsTable tbody');
+    
+    if (leads.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="table-placeholder">
+                    <i class="fas fa-inbox"></i>
+                    <p>Nenhum lead encontrado</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
     tbody.innerHTML = '';
     
     leads.forEach(lead => {
         const row = document.createElement('tr');
         
         row.innerHTML = `
-            <td>${lead.nome}</td>
+            <td><strong>${lead.nome}</strong></td>
             <td>${formatPhone(lead.telefone)}</td>
-            <td><span class="temperatura-${lead.temperatura} status-tag">${lead.temperatura}</span></td>
+            <td><span class="temperatura-${lead.temperatura} temperatura-tag">${lead.temperatura}</span></td>
             <td><span class="status-${lead.status.replace(' ', '-')} status-tag">${lead.status}</span></td>
             <td>${lead.dataVisitaFormatada}</td>
             <td>${lead.vendedorNome || 'N/A'}</td>
@@ -441,12 +532,66 @@ function setupLeadForm() {
     // Definir data mínima como hoje
     const today = new Date().toISOString().split('T')[0];
     visitDateInput.min = today;
+    visitDateInput.value = today;
+    
+    // Formatar telefone enquanto digita
+    const phoneInput = document.getElementById('leadPhone');
+    phoneInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        
+        if (value.length > 11) value = value.substring(0, 11);
+        
+        if (value.length > 10) {
+            value = value.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
+        } else if (value.length > 6) {
+            value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+        } else if (value.length > 2) {
+            value = value.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
+        } else if (value.length > 0) {
+            value = value.replace(/^(\d*)/, '($1');
+        }
+        
+        e.target.value = value;
+    });
     
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
+        // Coletar dados do formulário
+        const leadData = {
+            nome: document.getElementById('leadName').value.trim(),
+            telefone: document.getElementById('leadPhone').value.trim(),
+            email: document.getElementById('leadEmail').value.trim(),
+            endereco: document.getElementById('leadAddress').value.trim(),
+            temperatura: document.getElementById('leadTemperature').value,
+            status: document.getElementById('leadStatus').value
+        };
+        
+        // Validar campos obrigatórios
+        const requiredFields = ['nome', 'telefone', 'email', 'endereco', 'temperatura', 'status'];
+        const missingFields = requiredFields.filter(field => !leadData[field]);
+        
+        if (missingFields.length > 0) {
+            showMessage('leadMessage', `Por favor, preencha todos os campos obrigatórios`, 'error');
+            return;
+        }
+        
+        // Validar e-mail
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(leadData.email)) {
+            showMessage('leadMessage', 'Por favor, insira um e-mail válido', 'error');
+            return;
+        }
+        
+        // Validar telefone
+        const phoneDigits = leadData.telefone.replace(/\D/g, '');
+        if (phoneDigits.length < 10) {
+            showMessage('leadMessage', 'Por favor, insira um telefone válido', 'error');
+            return;
+        }
+        
         // Validar data
-        const visitDate = new Date(visitDateInput.value);
+        const visitDate = new Date(document.getElementById('leadVisitDate').value);
         const todayObj = new Date();
         todayObj.setHours(0, 0, 0, 0);
         
@@ -459,76 +604,103 @@ function setupLeadForm() {
             // Formatar data
             const formattedDate = formatDate(visitDate);
             
-            const leadData = {
-                nome: document.getElementById('leadName').value.trim(),
-                telefone: document.getElementById('leadPhone').value.trim(),
-                email: document.getElementById('leadEmail').value.trim(),
-                endereco: document.getElementById('leadAddress').value.trim(),
-                temperatura: document.getElementById('leadTemperature').value,
-                status: document.getElementById('leadStatus').value,
-                dataVisitaISO: visitDate.toISOString(),
-                dataVisitaFormatada: formattedDate
-            };
+            // Adicionar dados de data ao lead
+            leadData.dataVisitaISO = visitDate.toISOString();
+            leadData.dataVisitaFormatada = formattedDate;
             
-            // Validar campos obrigatórios
-            for (const [key, value] of Object.entries(leadData)) {
-                if (!value) {
-                    showMessage('leadMessage', `Por favor, preencha o campo: ${key}`, 'error');
-                    return;
-                }
-            }
+            // Desabilitar botão durante o salvamento
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="loading"></span> Salvando...';
+            submitBtn.disabled = true;
             
+            // Salvar lead
             await saveLead(leadData);
             
-            // Limpar formulário e mostrar sucesso
+            // Limpar formulário
             form.reset();
+            visitDateInput.value = today;
+            
+            // Mostrar mensagem de sucesso
             showMessage('leadMessage', 'Lead cadastrado com sucesso!', 'success');
             
             // Atualizar listas
             if (document.getElementById('leads').classList.contains('active')) {
-                loadLeadsTable();
+                await loadLeadsTable();
             }
             
             if (document.getElementById('dashboard').classList.contains('active')) {
-                loadDashboardData(document.getElementById('dashboardFilter').value);
+                await loadDashboardData(document.getElementById('dashboardFilter').value);
             }
             
         } catch (error) {
+            console.error('Erro ao salvar lead:', error);
             showMessage('leadMessage', 'Erro ao salvar lead: ' + error.message, 'error');
+        } finally {
+            // Reabilitar botão
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
         }
     });
 }
 
 // ==================== TABELA DE LEADS ====================
 async function loadLeadsTable() {
-    const filter = document.getElementById('leadsFilter').value;
-    const leads = await getLeads({ status: filter });
-    const tbody = document.querySelector('#leadsTable tbody');
-    
-    tbody.innerHTML = '';
-    
-    leads.forEach(lead => {
-        const row = document.createElement('tr');
+    try {
+        const filter = document.getElementById('leadsFilter').value;
+        const leads = await getLeads({ status: filter });
+        const tbody = document.querySelector('#leadsTable tbody');
         
-        row.innerHTML = `
-            <td>${lead.nome}</td>
-            <td>${formatPhone(lead.telefone)}</td>
-            <td>${lead.email}</td>
-            <td><span class="temperatura-${lead.temperatura} status-tag">${lead.temperatura}</span></td>
-            <td><span class="status-${lead.status.replace(' ', '-')} status-tag">${lead.status}</span></td>
-            <td>${lead.dataVisitaFormatada}</td>
-            <td>
-                ${currentUserData.tipo !== 'vendedor' ? 
-                    `<button class="btn btn-sm btn-secondary" onclick="editLead('${lead.id}')">
-                        <i class="fas fa-edit"></i> Editar
-                    </button>` : 
-                    `<span class="text-muted">Somente leitura</span>`
-                }
-            </td>
+        if (leads.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="table-placeholder">
+                        <i class="fas fa-inbox"></i>
+                        <p>Nenhum lead encontrado</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        tbody.innerHTML = '';
+        
+        leads.forEach(lead => {
+            const row = document.createElement('tr');
+            
+            row.innerHTML = `
+                <td><strong>${lead.nome}</strong></td>
+                <td>${formatPhone(lead.telefone)}</td>
+                <td>${lead.email}</td>
+                <td><span class="temperatura-${lead.temperatura} temperatura-tag">${lead.temperatura}</span></td>
+                <td><span class="status-${lead.status.replace(' ', '-')} status-tag">${lead.status}</span></td>
+                <td>${lead.dataVisitaFormatada}</td>
+                <td class="table-actions">
+                    ${currentUserData.tipo !== 'vendedor' ? 
+                        `<button class="btn btn-sm btn-secondary" onclick="editLead('${lead.id}')">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>` : 
+                        `<span class="text-muted">Somente leitura</span>`
+                    }
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+        
+    } catch (error) {
+        console.error('Erro ao carregar tabela de leads:', error);
+        const tbody = document.querySelector('#leadsTable tbody');
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="table-placeholder">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Erro ao carregar leads: ${error.message}</p>
+                </td>
+            </tr>
         `;
-        
-        tbody.appendChild(row);
-    });
+    }
 }
 
 // ==================== ADMINISTRAÇÃO ====================
@@ -539,11 +711,16 @@ function setupAdminForm() {
         e.preventDefault();
         
         const name = document.getElementById('adminName').value.trim();
-        const email = document.getElementById('adminEmail').value.trim();
+        const email = document.getElementById('adminEmail').value.trim().toLowerCase();
         const password = document.getElementById('adminPassword').value;
         const confirmPassword = document.getElementById('adminConfirmPassword').value;
         
         // Validações
+        if (!name || !email || !password || !confirmPassword) {
+            showMessage('adminMessage', 'Por favor, preencha todos os campos', 'error');
+            return;
+        }
+        
         if (password !== confirmPassword) {
             showMessage('adminMessage', 'As senhas não coincidem', 'error');
             return;
@@ -554,7 +731,19 @@ function setupAdminForm() {
             return;
         }
         
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            showMessage('adminMessage', 'Por favor, insira um e-mail válido', 'error');
+            return;
+        }
+        
         try {
+            // Desabilitar botão durante a criação
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="loading"></span> Criando...';
+            submitBtn.disabled = true;
+            
             // Criar usuário no Firebase Auth
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             
@@ -564,19 +753,37 @@ function setupAdminForm() {
                 email: email,
                 tipo: 'vendedor',
                 criadoPor: currentUser.uid,
+                criadoPorNome: currentUserData.nome,
                 criadoEm: serverTimestamp()
             });
             
-            // Limpar formulário e mostrar sucesso
+            // Limpar formulário
             form.reset();
+            
+            // Mostrar mensagem de sucesso
             showMessage('adminMessage', 'Vendedor criado com sucesso!', 'success');
             
             // Atualizar lista de usuários
-            loadUsersList();
+            await loadUsersList();
             
         } catch (error) {
             console.error('Erro ao criar vendedor:', error);
-            showMessage('adminMessage', 'Erro: ' + error.message, 'error');
+            
+            let errorMessage = 'Erro ao criar vendedor';
+            if (error.code === 'auth/email-already-in-use') {
+                errorMessage = 'Este e-mail já está em uso';
+            } else if (error.code === 'auth/invalid-email') {
+                errorMessage = 'E-mail inválido';
+            } else if (error.code === 'auth/weak-password') {
+                errorMessage = 'A senha é muito fraca';
+            }
+            
+            showMessage('adminMessage', errorMessage, 'error');
+        } finally {
+            // Reabilitar botão
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
         }
     });
 }
@@ -588,6 +795,19 @@ async function loadUsersList() {
         const querySnapshot = await getDocs(q);
         
         const tbody = document.querySelector('#usersTable tbody');
+        
+        if (querySnapshot.empty) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="table-placeholder">
+                        <i class="fas fa-users"></i>
+                        <p>Nenhum vendedor cadastrado</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
         tbody.innerHTML = '';
         
         querySnapshot.forEach((doc) => {
@@ -595,7 +815,7 @@ async function loadUsersList() {
             const row = document.createElement('tr');
             
             row.innerHTML = `
-                <td>${user.nome}</td>
+                <td><strong>${user.nome}</strong></td>
                 <td>${user.email}</td>
                 <td><span class="badge badge-info">${getRoleDisplayName(user.tipo)}</span></td>
                 <td>${user.criadoEm ? formatFirebaseDate(user.criadoEm) : 'N/A'}</td>
@@ -606,6 +826,15 @@ async function loadUsersList() {
         
     } catch (error) {
         console.error('Erro ao carregar lista de usuários:', error);
+        const tbody = document.querySelector('#usersTable tbody');
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="table-placeholder">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Erro ao carregar vendedores</p>
+                </td>
+            </tr>
+        `;
     }
 }
 
@@ -634,6 +863,11 @@ function setupPasswordChangeForm() {
         const confirmNewPassword = document.getElementById('confirmNewPassword').value;
         
         // Validações
+        if (!currentPassword || !newPassword || !confirmNewPassword) {
+            showMessage('passwordMessage', 'Por favor, preencha todos os campos', 'error');
+            return;
+        }
+        
         if (newPassword !== confirmNewPassword) {
             showMessage('passwordMessage', 'As novas senhas não coincidem', 'error');
             return;
@@ -645,6 +879,12 @@ function setupPasswordChangeForm() {
         }
         
         try {
+            // Desabilitar botão durante a alteração
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="loading"></span> Alterando...';
+            submitBtn.disabled = true;
+            
             // Reautenticar usuário
             const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
             await reauthenticateWithCredential(currentUser, credential);
@@ -652,8 +892,10 @@ function setupPasswordChangeForm() {
             // Atualizar senha
             await updatePassword(currentUser, newPassword);
             
-            // Limpar formulário e mostrar sucesso
+            // Limpar formulário
             form.reset();
+            
+            // Mostrar mensagem de sucesso
             showMessage('passwordMessage', 'Senha alterada com sucesso!', 'success');
             
         } catch (error) {
@@ -664,9 +906,16 @@ function setupPasswordChangeForm() {
                 errorMessage = 'Senha atual incorreta';
             } else if (error.code === 'auth/weak-password') {
                 errorMessage = 'A nova senha é muito fraca';
+            } else if (error.code === 'auth/requires-recent-login') {
+                errorMessage = 'Por favor, faça login novamente antes de alterar a senha';
             }
             
             showMessage('passwordMessage', errorMessage, 'error');
+        } finally {
+            // Reabilitar botão
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
         }
     });
 }
@@ -692,6 +941,7 @@ window.editLead = async function(leadId) {
         }
     } catch (error) {
         console.error('Erro ao carregar lead para edição:', error);
+        alert('Erro ao carregar lead: ' + error.message);
     }
 };
 
@@ -722,20 +972,31 @@ function setupEditModal() {
         const status = document.getElementById('editStatus').value;
         
         try {
+            // Desabilitar botão durante a atualização
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="loading"></span> Salvando...';
+            submitBtn.disabled = true;
+            
             await updateLead(leadId, { temperatura, status });
             
             // Fechar modal
             modal.classList.remove('active');
             
             // Atualizar tabelas
-            loadLeadsTable();
-            loadDashboardData(document.getElementById('dashboardFilter').value);
+            await loadLeadsTable();
+            await loadDashboardData(document.getElementById('dashboardFilter').value);
             
             showMessage('leadMessage', 'Lead atualizado com sucesso!', 'success');
             
         } catch (error) {
             console.error('Erro ao atualizar lead:', error);
             alert('Erro ao atualizar lead: ' + error.message);
+        } finally {
+            // Reabilitar botão
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
         }
     });
 }
@@ -752,26 +1013,35 @@ function formatDate(date) {
 function formatFirebaseDate(timestamp) {
     if (!timestamp) return 'N/A';
     
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return formatDate(date);
+    try {
+        const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+        return formatDate(date);
+    } catch (error) {
+        return 'Data inválida';
+    }
 }
 
 function formatPhone(phone) {
-    // Formatar telefone no padrão brasileiro
+    if (!phone) return 'N/A';
+    
+    // Remover todos os não dígitos
     const cleaned = phone.replace(/\D/g, '');
     
     if (cleaned.length === 11) {
         return `(${cleaned.substring(0, 2)}) ${cleaned.substring(2, 7)}-${cleaned.substring(7)}`;
     } else if (cleaned.length === 10) {
         return `(${cleaned.substring(0, 2)}) ${cleaned.substring(2, 6)}-${cleaned.substring(6)}`;
+    } else if (cleaned.length > 0) {
+        return phone;
     }
     
-    return phone;
+    return 'N/A';
 }
 
-function showError(message) {
+function showLoginError(message) {
     loginError.textContent = message;
     loginError.style.display = 'block';
+    loginError.className = 'error-message';
     
     // Esconder após 5 segundos
     setTimeout(() => {
@@ -795,6 +1065,7 @@ function showMessage(elementId, message, type = 'success') {
 function showLoginScreen() {
     loginScreen.classList.add('active');
     mainScreen.classList.remove('active');
+    document.title = 'Global - Funil de Vendas';
 }
 
 function showMainScreen() {
@@ -817,8 +1088,8 @@ function redirectBasedOnRole() {
     });
     
     // Redirecionar baseado no papel
-    let targetSection = 'dashboard';
-    let targetLink = '[data-section="dashboard"]';
+    let targetSection = 'profile';
+    let targetLink = '[data-section="profile"]';
     
     switch(role) {
         case 'vendedor':
@@ -836,8 +1107,21 @@ function redirectBasedOnRole() {
     }
     
     // Ativar seção e link correspondentes
-    document.getElementById(targetSection).classList.add('active');
-    document.querySelector(targetLink).classList.add('active');
+    const sectionElement = document.getElementById(targetSection);
+    const linkElement = document.querySelector(targetLink);
+    
+    if (sectionElement && linkElement) {
+        sectionElement.classList.add('active');
+        linkElement.classList.add('active');
+    }
+    
+    // Atualizar título da página
+    if (sectionElement) {
+        const sectionTitle = sectionElement.querySelector('h2');
+        if (sectionTitle) {
+            document.title = `Global - ${sectionTitle.textContent.replace(/[^a-zA-Z0-9\s]/g, '').trim()}`;
+        }
+    }
 }
 
 // ==================== SETUP EVENT LISTENERS ====================
@@ -863,11 +1147,50 @@ function setupEventListeners() {
     setupPasswordChangeForm();
     setupEditModal();
     
-    // Carregar dados iniciais
-    loadDashboardData();
-    loadLeadsTable();
-    loadUsersList();
+    // Navegação
+    setupNavigation();
+}
+
+function setupNavigation() {
+    const navLinks = document.querySelectorAll('.nav-link');
+    
+    navLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const sectionId = this.getAttribute('data-section');
+            
+            // Remove active class from all links and sections
+            navLinks.forEach(l => l.classList.remove('active'));
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Add active class to clicked link and corresponding section
+            this.classList.add('active');
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Atualizar título da página
+            const sectionTitle = document.querySelector(`#${sectionId} h2`);
+            if (sectionTitle) {
+                document.title = `Global - ${sectionTitle.textContent.replace(/[^a-zA-Z0-9\s]/g, '').trim()}`;
+            }
+            
+            // Carregar dados da seção se necessário
+            switch(sectionId) {
+                case 'dashboard':
+                    loadDashboardData(document.getElementById('dashboardFilter').value);
+                    break;
+                case 'leads':
+                    loadLeadsTable();
+                    break;
+                case 'admin':
+                    loadUsersList();
+                    break;
+            }
+        });
+    });
 }
 
 // Exportar funções para uso no HTML
-window.editLead = editLead;
+window.editLead = window.editLead;
