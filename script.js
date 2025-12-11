@@ -1,13 +1,13 @@
 // Configuração do Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyAuCkAymqWECmPWDShZNXrGoFCnSYbWFSo",
-  authDomain: "funil-de-vendas-global.firebaseapp.com",
-  databaseURL: "https://funil-de-vendas-global-default-rtdb.firebaseio.com",
-  projectId: "funil-de-vendas-global",
-  storageBucket: "funil-de-vendas-global.firebasestorage.app",
-  messagingSenderId: "318100511712",
-  appId: "1:318100511712:web:a266f1629231ab420ee985",
-  measurementId: "G-ED5Y456EF2"
+    apiKey: "AIzaSyAuCkAymqWECmPWDShZNXrGoFCnSYbWFSo",
+    authDomain: "funil-de-vendas-global.firebaseapp.com",
+    databaseURL: "https://funil-de-vendas-global-default-rtdb.firebaseio.com",
+    projectId: "funil-de-vendas-global",
+    storageBucket: "funil-de-vendas-global.firebasestorage.app",
+    messagingSenderId: "318100511712",
+    appId: "1:318100511712:web:a266f1629231ab420ee985",
+    measurementId: "G-ED5Y456EF2"
 };
 
 // Inicializar Firebase
@@ -15,1042 +15,1025 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const database = firebase.database();
 
-// Estado global da aplicação
-const appState = {
-  currentUser: null,
-  userRole: null,
-  currentScreen: 'login-screen',
-  currentMonth: null,
-  currentYear: null,
-  sellers: [],
-  leads: [],
-  filteredLeads: []
-};
+// Estado da aplicação
+let currentUser = null;
+let userRole = null;
+let chartInstances = {};
 
-// Inicializar gráficos do Google Charts
-google.charts.load('current', { packages: ['corechart'] });
+// DOM Elements
+const loginScreen = document.getElementById('loginScreen');
+const mainSystem = document.getElementById('mainSystem');
+const loginForm = document.getElementById('loginForm');
+const logoutBtn = document.getElementById('logoutBtn');
+const userEmail = document.getElementById('userEmail');
+const userRoleBadge = document.getElementById('userRoleBadge');
 
-// Inicialização da aplicação
-document.addEventListener('DOMContentLoaded', function() {
-  initializeApp();
-  
-  // Definir mês e ano atual
-  const now = new Date();
-  appState.currentMonth = now.getMonth() + 1; // Janeiro é 0
-  appState.currentYear = now.getFullYear();
-  
-  // Configurar eventos
-  setupEventListeners();
-  
-  // Verificar se já está autenticado
-  auth.onAuthStateChanged(handleAuthStateChange);
-});
+// Painéis
+const directorDashboard = document.getElementById('directorDashboard');
+const supervisorPanel = document.getElementById('supervisorPanel');
+const sellerPanel = document.getElementById('sellerPanel');
 
-// Inicializar elementos da UI
-function initializeApp() {
-  // Configurar select de meses no dashboard
-  const monthSelect = document.getElementById('month-select');
-  if (monthSelect) {
-    const months = [
-      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-    ];
-    
-    for (let i = 0; i < 12; i++) {
-      const option = document.createElement('option');
-      option.value = i + 1;
-      option.textContent = months[i];
-      
-      if (i + 1 === appState.currentMonth) {
-        option.selected = true;
-      }
-      
-      monthSelect.appendChild(option);
+// Elementos do Dashboard Diretor
+const totalLeadsElement = document.getElementById('totalLeads');
+const totalSellersElement = document.getElementById('totalSellers');
+const conversionRateElement = document.getElementById('conversionRate');
+const visitsThisMonthElement = document.getElementById('visitsThisMonth');
+const yearFilter = document.getElementById('yearFilter');
+const monthFilter = document.getElementById('monthFilter');
+
+// Elementos Supervisor
+const addSellerBtn = document.getElementById('addSellerBtn');
+const newSellerForm = document.getElementById('newSellerForm');
+const sellerForm = document.getElementById('sellerForm');
+const cancelSellerBtn = document.getElementById('cancelSellerBtn');
+const sellersTable = document.getElementById('sellersTable');
+
+// Elementos Vendedor
+const addLeadBtn = document.getElementById('addLeadBtn');
+const newLeadForm = document.getElementById('newLeadForm');
+const leadForm = document.getElementById('leadForm');
+const cancelLeadBtn = document.getElementById('cancelLeadBtn');
+const sellerLeadsTable = document.getElementById('sellerLeadsTable');
+
+// Filtros Vendedor
+const filterStatus = document.getElementById('filterStatus');
+const filterCity = document.getElementById('filterCity');
+const filterDate = document.getElementById('filterDate');
+const clearFilters = document.getElementById('clearFilters');
+
+// Modal
+const editModal = document.getElementById('editModal');
+const closeModal = document.querySelector('.close-modal');
+
+// Detectar tipo de usuário baseado no email
+function detectUserRole(email) {
+    if (email.includes('@diretorglobal.com.br')) {
+        return 'diretor';
+    } else if (email.includes('@supervisorglobal.com.br')) {
+        return 'supervisor';
+    } else if (email.includes('@vendedorglobal.com.br')) {
+        return 'vendedor';
     }
-  }
+    return 'vendedor'; // padrão
 }
 
-// Configurar todos os event listeners
-function setupEventListeners() {
-  // Login
-  document.getElementById('login-btn').addEventListener('click', handleLogin);
-  document.getElementById('forgot-password-btn').addEventListener('click', showResetPasswordScreen);
-  
-  // Reset de senha
-  document.getElementById('reset-btn').addEventListener('click', handlePasswordReset);
-  document.getElementById('back-to-login-btn').addEventListener('click', showLoginScreen);
-  
-  // Logout
-  document.getElementById('logout-btn').addEventListener('click', handleLogout);
-  
-  // Navegação
-  document.querySelectorAll('.nav-link').forEach(link => {
-    link.addEventListener('click', function(e) {
-      e.preventDefault();
-      const screen = this.getAttribute('data-screen');
-      showScreen(screen);
+// Criar menu lateral baseado no perfil
+function createSidebarMenu(role) {
+    const sidebar = document.getElementById('sidebar');
+    let menuItems = '';
+    
+    if (role === 'diretor') {
+        menuItems = `
+            <div class="sidebar-nav">
+                <a href="#" class="sidebar-item active" data-panel="directorDashboard">
+                    <i class="fas fa-chart-line"></i> Dashboard
+                </a>
+                <a href="#" class="sidebar-item" data-panel="supervisorPanel">
+                    <i class="fas fa-user-shield"></i> Supervisor
+                </a>
+            </div>
+        `;
+    } else if (role === 'supervisor') {
+        menuItems = `
+            <div class="sidebar-nav">
+                <a href="#" class="sidebar-item active" data-panel="supervisorPanel">
+                    <i class="fas fa-user-shield"></i> Painel Supervisor
+                </a>
+                <a href="#" class="sidebar-item" data-panel="sellerPanel">
+                    <i class="fas fa-user"></i> Meus Leads
+                </a>
+            </div>
+        `;
+    } else if (role === 'vendedor') {
+        menuItems = `
+            <div class="sidebar-nav">
+                <a href="#" class="sidebar-item active" data-panel="sellerPanel">
+                    <i class="fas fa-user"></i> Meus Leads
+                </a>
+            </div>
+        `;
+    }
+    
+    sidebar.innerHTML = menuItems;
+    
+    // Adicionar event listeners aos itens do menu
+    document.querySelectorAll('.sidebar-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const panel = item.getAttribute('data-panel');
+            showPanel(panel);
+            
+            // Atualizar estado ativo
+            document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+        });
     });
-  });
-  
-  // Dashboard
-  document.getElementById('month-select')?.addEventListener('change', function() {
-    appState.currentMonth = parseInt(this.value);
-    loadDashboardData();
-  });
-  
-  // Vendedores
-  document.getElementById('new-seller-btn')?.addEventListener('click', showNewSellerModal);
-  document.getElementById('save-seller-btn')?.addEventListener('click', handleNewSeller);
-  document.getElementById('cancel-seller-btn')?.addEventListener('click', hideNewSellerModal);
-  
-  // Leads
-  document.getElementById('save-lead-btn')?.addEventListener('click', handleSaveLead);
-  document.getElementById('cancel-lead-btn')?.addEventListener('click', function() {
-    showScreen('leads-screen');
-  });
-  
-  // Filtros de leads
-  document.getElementById('filter-status')?.addEventListener('change', filterLeads);
-  document.getElementById('filter-city')?.addEventListener('input', filterLeads);
-  document.getElementById('filter-date')?.addEventListener('change', filterLeads);
-  document.getElementById('clear-filters-btn')?.addEventListener('click', clearFilters);
-  
-  // Modais
-  document.querySelectorAll('.close-modal').forEach(btn => {
-    btn.addEventListener('click', hideAllModals);
-  });
-  
-  document.getElementById('modal-overlay').addEventListener('click', hideAllModals);
-  document.getElementById('close-details-btn')?.addEventListener('click', hideAllModals);
 }
 
-// Autenticação
-function handleAuthStateChange(user) {
-  if (user) {
-    appState.currentUser = user;
+// Mostrar painel específico
+function showPanel(panelId) {
+    // Esconder todos os painéis
+    document.querySelectorAll('.dashboard-section').forEach(panel => {
+        panel.classList.remove('active');
+    });
     
-    // Obter role do usuário do banco de dados
-    database.ref('users/' + user.uid).once('value')
-      .then(snapshot => {
-        const userData = snapshot.val();
+    // Mostrar painel selecionado
+    const panel = document.getElementById(panelId);
+    if (panel) {
+        panel.classList.add('active');
         
-        if (userData) {
-          appState.userRole = userData.role;
-          document.getElementById('user-name').textContent = userData.name || user.email;
-          
-          // Mostrar menu de supervisor se for supervisor
-          if (appState.userRole === 'supervisor') {
-            document.getElementById('supervisor-nav').classList.remove('hidden');
-            showScreen('dashboard-screen');
-            loadDashboardData();
-            loadSellers();
-          } else {
-            document.getElementById('supervisor-nav').classList.add('hidden');
-            showScreen('seller-dashboard-screen');
-            loadSellerDashboard();
-          }
-          
-          // Mostrar header principal e esconder tela de login
-          document.getElementById('main-header').classList.remove('hidden');
-          document.getElementById('login-screen').classList.remove('active');
-          
-          // Carregar dados comuns
-          loadLeads();
-          populateSellerSelect();
-          
-          // Se for vendedor, carregar dashboard do vendedor
-          if (appState.userRole === 'vendedor') {
-            loadSellerDashboard();
-          }
-        } else {
-          // Se não tiver dados no DB, tratar como supervisor padrão
-          appState.userRole = 'supervisor';
-          document.getElementById('user-name').textContent = user.email;
-          document.getElementById('supervisor-nav').classList.remove('hidden');
-          showScreen('dashboard-screen');
-          loadDashboardData();
-          loadSellers();
-          
-          // Salvar usuário no DB
-          database.ref('users/' + user.uid).set({
-            uid: user.uid,
-            email: user.email,
-            role: 'supervisor',
-            name: user.email.split('@')[0],
-            active: true,
-            createdAt: firebase.database.ServerValue.TIMESTAMP
-          });
+        // Carregar dados específicos do painel
+        if (panelId === 'directorDashboard') {
+            loadDirectorDashboard();
+        } else if (panelId === 'supervisorPanel') {
+            loadSupervisorPanel();
+        } else if (panelId === 'sellerPanel') {
+            loadSellerLeads();
         }
-      })
-      .catch(error => {
-        showMessage('login-message', 'Erro ao carregar dados do usuário: ' + error.message, 'error');
-      });
-  } else {
-    // Usuário não autenticado
-    appState.currentUser = null;
-    appState.userRole = null;
-    
-    // Mostrar tela de login e esconder header
-    document.getElementById('main-header').classList.add('hidden');
-    showScreen('login-screen');
-  }
+    }
 }
 
 // Login
-function handleLogin() {
-  const email = document.getElementById('login-email').value;
-  const password = document.getElementById('login-password').value;
-  
-  if (!email || !password) {
-    showMessage('login-message', 'Por favor, preencha todos os campos.', 'error');
-    return;
-  }
-  
-  showMessage('login-message', 'Entrando...', 'info');
-  
-  auth.signInWithEmailAndPassword(email, password)
-    .then(() => {
-      showMessage('login-message', 'Login realizado com sucesso!', 'success');
-    })
-    .catch(error => {
-      let errorMessage = 'Erro ao fazer login.';
-      
-      switch (error.code) {
-        case 'auth/user-not-found':
-          errorMessage = 'Usuário não encontrado.';
-          break;
-        case 'auth/wrong-password':
-          errorMessage = 'Senha incorreta.';
-          break;
-        case 'auth/invalid-email':
-          errorMessage = 'E-mail inválido.';
-          break;
-        case 'auth/user-disabled':
-          errorMessage = 'Esta conta foi desativada.';
-          break;
-      }
-      
-      showMessage('login-message', errorMessage, 'error');
-    });
-}
+loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    
+    try {
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        currentUser = userCredential.user;
+        userRole = detectUserRole(currentUser.email);
+        
+        // Atualizar interface
+        userEmail.textContent = currentUser.email;
+        userRoleBadge.textContent = userRole.charAt(0).toUpperCase() + userRole.slice(1);
+        
+        // Criar menu
+        createSidebarMenu(userRole);
+        
+        // Mostrar sistema e esconder login
+        loginScreen.classList.remove('active');
+        mainSystem.classList.add('active');
+        
+        // Mostrar painel inicial
+        if (userRole === 'diretor') {
+            showPanel('directorDashboard');
+        } else if (userRole === 'supervisor') {
+            showPanel('supervisorPanel');
+        } else {
+            showPanel('sellerPanel');
+        }
+        
+        showMessage('Login realizado com sucesso!', 'success');
+    } catch (error) {
+        showMessage('Erro ao fazer login: ' + error.message, 'error');
+    }
+});
 
 // Logout
-function handleLogout() {
-  auth.signOut()
-    .then(() => {
-      showMessage('login-message', 'Logout realizado com sucesso.', 'success');
-    })
-    .catch(error => {
-      console.error('Erro ao fazer logout:', error);
-    });
-}
-
-// Reset de senha
-function handlePasswordReset() {
-  const email = document.getElementById('reset-email').value;
-  
-  if (!email) {
-    showMessage('reset-message', 'Por favor, informe seu e-mail.', 'error');
-    return;
-  }
-  
-  showMessage('reset-message', 'Enviando link de recuperação...', 'info');
-  
-  auth.sendPasswordResetEmail(email)
-    .then(() => {
-      showMessage('reset-message', 'Link de recuperação enviado para seu e-mail.', 'success');
-    })
-    .catch(error => {
-      showMessage('reset-message', 'Erro ao enviar link: ' + error.message, 'error');
-    });
-}
-
-// Mostrar/Esconder telas
-function showScreen(screenId) {
-  // Esconder todas as telas
-  document.querySelectorAll('.screen').forEach(screen => {
-    screen.classList.remove('active');
-    screen.classList.add('hidden');
-  });
-  
-  // Mostrar a tela desejada
-  const targetScreen = document.getElementById(screenId);
-  if (targetScreen) {
-    targetScreen.classList.remove('hidden');
-    targetScreen.classList.add('active');
-    appState.currentScreen = screenId;
-    
-    // Ativar link no menu
-    document.querySelectorAll('.nav-link').forEach(link => {
-      link.classList.remove('active');
-      if (link.getAttribute('data-screen') === screenId) {
-        link.classList.add('active');
-      }
-    });
-    
-    // Carregar dados específicos da tela
-    if (screenId === 'leads-screen') {
-      loadLeads();
-    } else if (screenId === 'sellers-screen' && appState.userRole === 'supervisor') {
-      loadSellers();
-    } else if (screenId === 'new-lead-screen') {
-      populateSellerSelect();
-      resetLeadForm();
-    } else if (screenId === 'seller-dashboard-screen' && appState.userRole === 'vendedor') {
-      loadSellerDashboard();
+logoutBtn.addEventListener('click', async () => {
+    try {
+        await auth.signOut();
+        currentUser = null;
+        userRole = null;
+        
+        // Resetar formulário
+        loginForm.reset();
+        
+        // Voltar para tela de login
+        mainSystem.classList.remove('active');
+        loginScreen.classList.add('active');
+        
+        showMessage('Logout realizado com sucesso!', 'success');
+    } catch (error) {
+        showMessage('Erro ao fazer logout: ' + error.message, 'error');
     }
-  }
-}
+});
 
-function showLoginScreen() {
-  showScreen('login-screen');
-}
-
-function showResetPasswordScreen() {
-  showScreen('reset-password-screen');
-}
-
-// Gerenciamento de Vendedores
-function showNewSellerModal() {
-  document.getElementById('new-seller-modal').classList.remove('hidden');
-  document.getElementById('modal-overlay').classList.remove('hidden');
-  document.getElementById('seller-message').innerHTML = '';
-}
-
-function hideNewSellerModal() {
-  document.getElementById('new-seller-modal').classList.add('hidden');
-  document.getElementById('modal-overlay').classList.add('hidden');
-}
-
-function handleNewSeller() {
-  const name = document.getElementById('seller-name').value;
-  const email = document.getElementById('seller-email').value;
-  const password = document.getElementById('seller-password').value;
-  
-  if (!name || !email || !password) {
-    showMessage('seller-message', 'Por favor, preencha todos os campos.', 'error');
-    return;
-  }
-  
-  if (password.length < 6) {
-    showMessage('seller-message', 'A senha deve ter pelo menos 6 caracteres.', 'error');
-    return;
-  }
-  
-  showMessage('seller-message', 'Criando vendedor...', 'info');
-  
-  // Criar usuário no Firebase Auth
-  auth.createUserWithEmailAndPassword(email, password)
-    .then((userCredential) => {
-      const user = userCredential.user;
-      
-      // Salvar dados no Realtime Database
-      return database.ref('users/' + user.uid).set({
-        uid: user.uid,
-        email: email,
-        name: name,
-        role: 'vendedor',
-        active: true,
-        createdAt: firebase.database.ServerValue.TIMESTAMP,
-        createdBy: appState.currentUser.uid
-      });
-    })
-    .then(() => {
-      showMessage('seller-message', 'Vendedor criado com sucesso!', 'success');
-      
-      // Limpar formulário
-      document.getElementById('seller-name').value = '';
-      document.getElementById('seller-email').value = '';
-      document.getElementById('seller-password').value = '';
-      
-      // Atualizar lista de vendedores
-      loadSellers();
-      populateSellerSelect();
-      
-      // Fechar modal após 2 segundos
-      setTimeout(() => {
-        hideNewSellerModal();
-      }, 2000);
-    })
-    .catch(error => {
-      let errorMessage = 'Erro ao criar vendedor.';
-      
-      if (error.code === 'auth/email-already-in-use') {
-        errorMessage = 'Este e-mail já está em uso.';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'E-mail inválido.';
-      }
-      
-      showMessage('seller-message', errorMessage, 'error');
-    });
-}
-
-function loadSellers() {
-  database.ref('users').orderByChild('role').equalTo('vendedor').once('value')
-    .then(snapshot => {
-      const sellers = [];
-      snapshot.forEach(childSnapshot => {
-        const seller = childSnapshot.val();
-        seller.id = childSnapshot.key;
-        sellers.push(seller);
-      });
-      
-      appState.sellers = sellers;
-      renderSellersTable(sellers);
-    })
-    .catch(error => {
-      console.error('Erro ao carregar vendedores:', error);
-      document.getElementById('sellers-table-body').innerHTML = 
-        '<tr><td colspan="6">Erro ao carregar vendedores.</td></tr>';
-    });
-}
-
-function renderSellersTable(sellers) {
-  const tbody = document.getElementById('sellers-table-body');
-  
-  if (sellers.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6">Nenhum vendedor cadastrado.</td></tr>';
-    return;
-  }
-  
-  let html = '';
-  
-  sellers.forEach(seller => {
-    const createdAt = seller.createdAt ? new Date(seller.createdAt).toLocaleDateString('pt-BR') : 'N/A';
+// Mostrar mensagens
+function showMessage(message, type) {
+    const messageDiv = document.getElementById('loginMessage');
+    messageDiv.textContent = message;
+    messageDiv.className = `message ${type}`;
+    messageDiv.style.display = 'block';
     
-    html += `
-      <tr>
-        <td>${seller.name || 'N/A'}</td>
-        <td>${seller.email}</td>
-        <td>
-          <span class="status-badge ${seller.active ? 'status-fechado' : 'status-perdido'}">
-            ${seller.active ? 'Ativo' : 'Inativo'}
-          </span>
-        </td>
-        <td>0</td>
-        <td>${createdAt}</td>
-        <td class="actions">
-          <button class="action-btn delete" onclick="toggleSellerStatus('${seller.id}', ${!seller.active})">
-            ${seller.active ? 'Desativar' : 'Ativar'}
-          </button>
-        </td>
-      </tr>
-    `;
-  });
-  
-  tbody.innerHTML = html;
-}
-
-function toggleSellerStatus(sellerId, newStatus) {
-  database.ref('users/' + sellerId).update({ active: newStatus })
-    .then(() => {
-      loadSellers();
-      populateSellerSelect();
-    })
-    .catch(error => {
-      console.error('Erro ao alterar status do vendedor:', error);
-      alert('Erro ao alterar status do vendedor.');
-    });
-}
-
-// Gerenciamento de Leads
-function handleSaveLead(e) {
-  e.preventDefault();
-  
-  const name = document.getElementById('lead-name').value;
-  const phone = document.getElementById('lead-phone').value;
-  const email = document.getElementById('lead-email').value;
-  const city = document.getElementById('lead-city').value;
-  const product = document.getElementById('lead-product').value;
-  const status = document.getElementById('lead-status').value;
-  const visitDate = document.getElementById('lead-visit-date').value;
-  const sellerId = document.getElementById('lead-seller').value || appState.currentUser.uid;
-  const notes = document.getElementById('lead-notes').value;
-  
-  // Validação básica
-  if (!name || !phone || !email || !city || !product || !status) {
-    showMessage('lead-message', 'Por favor, preencha todos os campos obrigatórios.', 'error');
-    return;
-  }
-  
-  showMessage('lead-message', 'Salvando lead...', 'info');
-  
-  // Determinar vendedor responsável
-  let sellerName = appState.currentUser.email.split('@')[0];
-  if (sellerId !== appState.currentUser.uid) {
-    const seller = appState.sellers.find(s => s.id === sellerId);
-    if (seller) {
-      sellerName = seller.name;
-    }
-  }
-  
-  // Criar objeto lead
-  const leadId = generateLeadId();
-  const now = new Date();
-  const month = now.getMonth() + 1;
-  const year = now.getFullYear();
-  
-  const leadData = {
-    id: leadId,
-    name: name,
-    phone: phone,
-    email: email,
-    city: city,
-    product: product,
-    status: status,
-    visitDate: visitDate || null,
-    sellerId: sellerId,
-    sellerName: sellerName,
-    notes: notes || '',
-    createdAt: firebase.database.ServerValue.TIMESTAMP,
-    createdBy: appState.currentUser.uid,
-    updatedAt: firebase.database.ServerValue.TIMESTAMP
-  };
-  
-  // Salvar no caminho obrigatório /leads/{ano}/{mes}/{id}
-  database.ref(`leads/${year}/${month}/${leadId}`).set(leadData)
-    .then(() => {
-      showMessage('lead-message', 'Lead salvo com sucesso!', 'success');
-      
-      // Limpar formulário
-      resetLeadForm();
-      
-      // Atualizar listas
-      if (appState.userRole === 'supervisor') {
-        loadDashboardData();
-      } else {
-        loadSellerDashboard();
-      }
-      
-      loadLeads();
-      
-      // Redirecionar para lista de leads após 2 segundos
-      setTimeout(() => {
-        showScreen('leads-screen');
-      }, 2000);
-    })
-    .catch(error => {
-      showMessage('lead-message', 'Erro ao salvar lead: ' + error.message, 'error');
-    });
-}
-
-function resetLeadForm() {
-  document.getElementById('lead-form').reset();
-  
-  // Definir data de visita para amanhã
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  document.getElementById('lead-visit-date').value = tomorrow.toISOString().split('T')[0];
-  
-  // Definir vendedor padrão
-  if (appState.userRole === 'vendedor') {
-    document.getElementById('lead-seller').value = appState.currentUser.uid;
-  }
-}
-
-function generateLeadId() {
-  return 'lead_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-}
-
-function loadLeads() {
-  const now = new Date();
-  const month = appState.currentMonth || now.getMonth() + 1;
-  const year = appState.currentYear || now.getFullYear();
-  
-  // Construir referência para leads
-  let leadsRef = database.ref(`leads/${year}/${month}`);
-  
-  // Se for vendedor, filtrar apenas seus leads
-  if (appState.userRole === 'vendedor') {
-    leadsRef = leadsRef.orderByChild('sellerId').equalTo(appState.currentUser.uid);
-  }
-  
-  leadsRef.once('value')
-    .then(snapshot => {
-      const leads = [];
-      snapshot.forEach(childSnapshot => {
-        const lead = childSnapshot.val();
-        lead.id = childSnapshot.key;
-        leads.push(lead);
-      });
-      
-      // Ordenar por data de criação (mais recente primeiro)
-      leads.sort((a, b) => {
-        return (b.createdAt || 0) - (a.createdAt || 0);
-      });
-      
-      appState.leads = leads;
-      appState.filteredLeads = [...leads];
-      renderLeadsTable(leads);
-    })
-    .catch(error => {
-      console.error('Erro ao carregar leads:', error);
-      document.getElementById('leads-table-body').innerHTML = 
-        '<tr><td colspan="7">Erro ao carregar leads.</td></tr>';
-    });
-}
-
-function renderLeadsTable(leads) {
-  const tbody = document.getElementById('leads-table-body');
-  
-  if (leads.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7">Nenhum lead encontrado.</td></tr>';
-    return;
-  }
-  
-  let html = '';
-  
-  leads.forEach(lead => {
-    const visitDate = lead.visitDate ? new Date(lead.visitDate).toLocaleDateString('pt-BR') : 'Não agendada';
-    const statusClass = `status-${lead.status.toLowerCase().replace(' ', '-')}`;
-    
-    html += `
-      <tr>
-        <td>${lead.name}</td>
-        <td>${lead.phone}</td>
-        <td>${lead.city}</td>
-        <td>${lead.product}</td>
-        <td><span class="status-badge ${statusClass}">${lead.status}</span></td>
-        <td>${visitDate}</td>
-        <td class="actions">
-          <button class="action-btn view" onclick="showLeadDetails('${lead.id}')">Ver</button>
-        </td>
-      </tr>
-    `;
-  });
-  
-  tbody.innerHTML = html;
-}
-
-function filterLeads() {
-  const statusFilter = document.getElementById('filter-status').value;
-  const cityFilter = document.getElementById('filter-city').value.toLowerCase();
-  const dateFilter = document.getElementById('filter-date').value;
-  
-  let filtered = [...appState.leads];
-  
-  // Filtrar por status
-  if (statusFilter) {
-    filtered = filtered.filter(lead => lead.status === statusFilter);
-  }
-  
-  // Filtrar por cidade
-  if (cityFilter) {
-    filtered = filtered.filter(lead => lead.city.toLowerCase().includes(cityFilter));
-  }
-  
-  // Filtrar por data de visita
-  if (dateFilter) {
-    filtered = filtered.filter(lead => lead.visitDate === dateFilter);
-  }
-  
-  appState.filteredLeads = filtered;
-  renderLeadsTable(filtered);
-}
-
-function clearFilters() {
-  document.getElementById('filter-status').value = '';
-  document.getElementById('filter-city').value = '';
-  document.getElementById('filter-date').value = '';
-  
-  appState.filteredLeads = [...appState.leads];
-  renderLeadsTable(appState.leads);
-}
-
-function showLeadDetails(leadId) {
-  const now = new Date();
-  const month = appState.currentMonth || now.getMonth() + 1;
-  const year = appState.currentYear || now.getFullYear();
-  
-  database.ref(`leads/${year}/${month}/${leadId}`).once('value')
-    .then(snapshot => {
-      const lead = snapshot.val();
-      
-      if (!lead) {
-        document.getElementById('lead-details-content').innerHTML = 
-          '<p>Lead não encontrado.</p>';
-      } else {
-        const createdAt = lead.createdAt ? new Date(lead.createdAt).toLocaleString('pt-BR') : 'N/A';
-        const visitDate = lead.visitDate ? new Date(lead.visitDate).toLocaleDateString('pt-BR') : 'Não agendada';
-        const statusClass = `status-${lead.status.toLowerCase().replace(' ', '-')}`;
-        
-        document.getElementById('lead-details-content').innerHTML = `
-          <div class="lead-detail">
-            <label>Nome:</label>
-            <p>${lead.name}</p>
-          </div>
-          
-          <div class="lead-detail">
-            <label>Telefone:</label>
-            <p>${lead.phone}</p>
-          </div>
-          
-          <div class="lead-detail">
-            <label>E-mail:</label>
-            <p>${lead.email}</p>
-          </div>
-          
-          <div class="lead-detail">
-            <label>Cidade:</label>
-            <p>${lead.city}</p>
-          </div>
-          
-          <div class="lead-detail">
-            <label>Produto de Interesse:</label>
-            <p>${lead.product}</p>
-          </div>
-          
-          <div class="lead-detail">
-            <label>Status:</label>
-            <p><span class="status-badge ${statusClass}">${lead.status}</span></p>
-          </div>
-          
-          <div class="lead-detail">
-            <label>Vendedor Responsável:</label>
-            <p>${lead.sellerName || 'N/A'}</p>
-          </div>
-          
-          <div class="lead-detail">
-            <label>Data da Visita:</label>
-            <p>${visitDate}</p>
-          </div>
-          
-          <div class="lead-detail">
-            <label>Observações:</label>
-            <p>${lead.notes || 'Nenhuma observação.'}</p>
-          </div>
-          
-          <div class="lead-detail">
-            <label>Cadastrado em:</label>
-            <p>${createdAt}</p>
-          </div>
-        `;
-      }
-      
-      // Mostrar modal
-      document.getElementById('lead-details-modal').classList.remove('hidden');
-      document.getElementById('modal-overlay').classList.remove('hidden');
-    })
-    .catch(error => {
-      console.error('Erro ao carregar detalhes do lead:', error);
-      document.getElementById('lead-details-content').innerHTML = 
-        '<p>Erro ao carregar detalhes do lead.</p>';
-      
-      document.getElementById('lead-details-modal').classList.remove('hidden');
-      document.getElementById('modal-overlay').classList.remove('hidden');
-    });
-}
-
-function populateSellerSelect() {
-  const select = document.getElementById('lead-seller');
-  
-  if (!select) return;
-  
-  // Limpar opções existentes (exceto a primeira)
-  while (select.options.length > 1) {
-    select.remove(1);
-  }
-  
-  // Se for supervisor, adicionar todos os vendedores ativos
-  if (appState.userRole === 'supervisor') {
-    const activeSellers = appState.sellers.filter(seller => seller.active);
-    
-    activeSellers.forEach(seller => {
-      const option = document.createElement('option');
-      option.value = seller.id;
-      option.textContent = seller.name || seller.email;
-      select.appendChild(option);
-    });
-  }
-}
-
-// Dashboard
-function loadDashboardData() {
-  const month = appState.currentMonth;
-  const year = appState.currentYear;
-  
-  // Carregar leads do mês
-  database.ref(`leads/${year}/${month}`).once('value')
-    .then(snapshot => {
-      const leads = [];
-      let leadCount = 0;
-      const statusCount = {};
-      const sellerCount = {};
-      let scheduledVisits = 0;
-      let closedLeads = 0;
-      
-      snapshot.forEach(childSnapshot => {
-        const lead = childSnapshot.val();
-        leads.push(lead);
-        leadCount++;
-        
-        // Contar por status
-        statusCount[lead.status] = (statusCount[lead.status] || 0) + 1;
-        
-        // Contar por vendedor
-        sellerCount[lead.sellerName] = (sellerCount[lead.sellerName] || 0) + 1;
-        
-        // Contar visitas agendadas
-        if (lead.visitDate) {
-          scheduledVisits++;
-        }
-        
-        // Contar leads fechados
-        if (lead.status === 'Fechado') {
-          closedLeads++;
-        }
-      });
-      
-      // Atualizar estatísticas
-      document.getElementById('month-leads').textContent = leadCount;
-      document.getElementById('scheduled-visits').textContent = scheduledVisits;
-      
-      // Calcular taxa de conversão
-      const conversionRate = leadCount > 0 ? Math.round((closedLeads / leadCount) * 100) : 0;
-      document.getElementById('conversion-rate').textContent = conversionRate + '%';
-      
-      // Atualizar contador de vendedores ativos
-      const activeSellers = appState.sellers.filter(s => s.active).length;
-      document.getElementById('active-sellers').textContent = activeSellers;
-      
-      // Renderizar gráficos
-      renderStatusChart(statusCount);
-      renderSellerChart(sellerCount);
-      loadRecentLeads(leads);
-    })
-    .catch(error => {
-      console.error('Erro ao carregar dados do dashboard:', error);
-    });
-}
-
-function renderStatusChart(statusData) {
-  const data = new google.visualization.DataTable();
-  data.addColumn('string', 'Status');
-  data.addColumn('number', 'Quantidade');
-  
-  const rows = [];
-  for (const status in statusData) {
-    rows.push([status, statusData[status]]);
-  }
-  
-  data.addRows(rows);
-  
-  const options = {
-    title: 'Leads por Status',
-    titleTextStyle: { color: '#367C2B', fontSize: 16, bold: true },
-    colors: ['#367C2B', '#FFDE00', '#3498db', '#e74c3c', '#9b59b6', '#2ecc71'],
-    backgroundColor: '#F5F5F5',
-    legend: { position: 'labeled', textStyle: { color: '#333', fontSize: 12 } },
-    pieSliceText: 'value',
-    chartArea: { width: '90%', height: '80%' }
-  };
-  
-  const chart = new google.visualization.PieChart(document.getElementById('status-chart'));
-  chart.draw(data, options);
-}
-
-function renderSellerChart(sellerData) {
-  const data = new google.visualization.DataTable();
-  data.addColumn('string', 'Vendedor');
-  data.addColumn('number', 'Leads');
-  
-  const rows = [];
-  for (const seller in sellerData) {
-    rows.push([seller, sellerData[seller]]);
-  }
-  
-  data.addRows(rows);
-  
-  const options = {
-    title: 'Leads por Vendedor',
-    titleTextStyle: { color: '#367C2B', fontSize: 16, bold: true },
-    colors: ['#367C2B'],
-    backgroundColor: '#F5F5F5',
-    legend: { position: 'none' },
-    hAxis: { textStyle: { color: '#333', fontSize: 12 } },
-    vAxis: { textStyle: { color: '#333', fontSize: 12 } },
-    chartArea: { width: '85%', height: '75%' }
-  };
-  
-  const chart = new google.visualization.BarChart(document.getElementById('seller-chart'));
-  chart.draw(data, options);
-}
-
-function loadRecentLeads(leads) {
-  const container = document.getElementById('recent-leads-content');
-  
-  // Ordenar por data (mais recentes primeiro)
-  const recentLeads = leads
-    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
-    .slice(0, 5);
-  
-  if (recentLeads.length === 0) {
-    container.innerHTML = '<p>Nenhum lead cadastrado este mês.</p>';
-    return;
-  }
-  
-  let html = '<div class="recent-leads-list">';
-  
-  recentLeads.forEach(lead => {
-    const date = lead.createdAt ? new Date(lead.createdAt).toLocaleDateString('pt-BR') : 'N/A';
-    const statusClass = `status-${lead.status.toLowerCase().replace(' ', '-')}`;
-    
-    html += `
-      <div class="recent-lead-item">
-        <div class="recent-lead-info">
-          <strong>${lead.name}</strong>
-          <span class="status-badge ${statusClass}">${lead.status}</span>
-        </div>
-        <div class="recent-lead-details">
-          <span>${lead.product} • ${lead.city}</span>
-          <span>${date}</span>
-        </div>
-      </div>
-    `;
-  });
-  
-  html += '</div>';
-  container.innerHTML = html;
-}
-
-// Dashboard do Vendedor
-function loadSellerDashboard() {
-  const now = new Date();
-  const month = now.getMonth() + 1;
-  const year = now.getFullYear();
-  
-  database.ref(`leads/${year}/${month}`)
-    .orderByChild('sellerId')
-    .equalTo(appState.currentUser.uid)
-    .once('value')
-    .then(snapshot => {
-      const leads = [];
-      let leadCount = 0;
-      const statusCount = {};
-      let scheduledVisits = 0;
-      let closedLeads = 0;
-      
-      snapshot.forEach(childSnapshot => {
-        const lead = childSnapshot.val();
-        leads.push(lead);
-        leadCount++;
-        
-        // Contar por status
-        statusCount[lead.status] = (statusCount[lead.status] || 0) + 1;
-        
-        // Contar visitas agendadas
-        if (lead.visitDate) {
-          scheduledVisits++;
-        }
-        
-        // Contar leads fechados
-        if (lead.status === 'Fechado') {
-          closedLeads++;
-        }
-      });
-      
-      // Atualizar estatísticas
-      document.getElementById('my-month-leads').textContent = leadCount;
-      document.getElementById('my-scheduled-visits').textContent = scheduledVisits;
-      
-      // Calcular taxa de conversão
-      const conversionRate = leadCount > 0 ? Math.round((closedLeads / leadCount) * 100) : 0;
-      document.getElementById('my-conversion-rate').textContent = conversionRate + '%';
-      
-      // Renderizar gráfico de status
-      renderMyStatusChart(statusCount);
-      loadMyRecentLeads(leads);
-    })
-    .catch(error => {
-      console.error('Erro ao carregar dashboard do vendedor:', error);
-    });
-}
-
-function renderMyStatusChart(statusData) {
-  const data = new google.visualization.DataTable();
-  data.addColumn('string', 'Status');
-  data.addColumn('number', 'Quantidade');
-  
-  const rows = [];
-  for (const status in statusData) {
-    rows.push([status, statusData[status]]);
-  }
-  
-  data.addRows(rows);
-  
-  const options = {
-    title: 'Meus Leads por Status',
-    titleTextStyle: { color: '#367C2B', fontSize: 16, bold: true },
-    colors: ['#367C2B', '#FFDE00', '#3498db', '#e74c3c', '#9b59b6', '#2ecc71'],
-    backgroundColor: '#F5F5F5',
-    legend: { position: 'labeled', textStyle: { color: '#333', fontSize: 12 } },
-    pieSliceText: 'value',
-    chartArea: { width: '90%', height: '80%' }
-  };
-  
-  const chart = new google.visualization.PieChart(document.getElementById('my-status-chart'));
-  chart.draw(data, options);
-}
-
-function loadMyRecentLeads(leads) {
-  const container = document.getElementById('my-recent-leads-content');
-  
-  // Ordenar por data (mais recentes primeiro)
-  const recentLeads = leads
-    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
-    .slice(0, 5);
-  
-  if (recentLeads.length === 0) {
-    container.innerHTML = '<p>Nenhum lead cadastrado este mês.</p>';
-    return;
-  }
-  
-  let html = '<div class="recent-leads-list">';
-  
-  recentLeads.forEach(lead => {
-    const date = lead.createdAt ? new Date(lead.createdAt).toLocaleDateString('pt-BR') : 'N/A';
-    const statusClass = `status-${lead.status.toLowerCase().replace(' ', '-')}`;
-    
-    html += `
-      <div class="recent-lead-item">
-        <div class="recent-lead-info">
-          <strong>${lead.name}</strong>
-          <span class="status-badge ${statusClass}">${lead.status}</span>
-        </div>
-        <div class="recent-lead-details">
-          <span>${lead.product} • ${lead.city}</span>
-          <span>${date}</span>
-        </div>
-      </div>
-    `;
-  });
-  
-  html += '</div>';
-  container.innerHTML = html;
-}
-
-// Utilitários
-function showMessage(elementId, message, type) {
-  const element = document.getElementById(elementId);
-  
-  if (!element) return;
-  
-  element.textContent = message;
-  element.className = 'message ' + type;
-  
-  // Auto-esconder mensagens de sucesso após 5 segundos
-  if (type === 'success') {
     setTimeout(() => {
-      element.textContent = '';
-      element.className = 'message';
+        messageDiv.style.display = 'none';
     }, 5000);
-  }
 }
 
-function hideAllModals() {
-  document.querySelectorAll('.modal').forEach(modal => {
-    modal.classList.add('hidden');
-  });
-  
-  document.getElementById('modal-overlay').classList.add('hidden');
+// Formatar data
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR');
 }
+
+// Obter ano/mês atual para organização
+function getCurrentYearMonth() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return { year, month };
+}
+
+// ========== FUNÇÕES DO DIRETOR ==========
+
+async function loadDirectorDashboard() {
+    // Carregar anos disponíveis
+    loadYearFilter();
+    
+    // Carregar dados
+    await loadDirectorStats();
+    await loadDirectorLeads();
+    await loadSellersForDirector();
+    
+    // Configurar listeners para filtros
+    yearFilter.addEventListener('change', loadDirectorDashboard);
+    monthFilter.addEventListener('change', loadDirectorDashboard);
+}
+
+async function loadYearFilter() {
+    try {
+        const snapshot = await database.ref('leads').once('value');
+        const years = [];
+        
+        snapshot.forEach(yearSnapshot => {
+            years.push(yearSnapshot.key);
+        });
+        
+        // Ordenar anos
+        years.sort((a, b) => b - a);
+        
+        // Atualizar select
+        yearFilter.innerHTML = '<option value="all">Todos os anos</option>';
+        years.forEach(year => {
+            yearFilter.innerHTML += `<option value="${year}">${year}</option>`;
+        });
+        
+        // Selecionar ano atual
+        const currentYear = getCurrentYearMonth().year;
+        yearFilter.value = currentYear;
+    } catch (error) {
+        console.error('Erro ao carregar anos:', error);
+    }
+}
+
+async function loadDirectorStats() {
+    try {
+        const year = yearFilter.value;
+        const month = monthFilter.value;
+        
+        let totalLeads = 0;
+        let totalVisits = 0;
+        let soldLeads = 0;
+        
+        if (year === 'all') {
+            const snapshot = await database.ref('leads').once('value');
+            snapshot.forEach(yearSnapshot => {
+                yearSnapshot.forEach(monthSnapshot => {
+                    monthSnapshot.forEach(leadSnapshot => {
+                        totalLeads++;
+                        const lead = leadSnapshot.val();
+                        if (lead.status === 'Vendido') soldLeads++;
+                        if (lead.visitDate) totalVisits++;
+                    });
+                });
+            });
+        } else if (month === 'all') {
+            const snapshot = await database.ref(`leads/${year}`).once('value');
+            snapshot.forEach(monthSnapshot => {
+                monthSnapshot.forEach(leadSnapshot => {
+                    totalLeads++;
+                    const lead = leadSnapshot.val();
+                    if (lead.status === 'Vendido') soldLeads++;
+                    if (lead.visitDate) totalVisits++;
+                });
+            });
+        } else {
+            const snapshot = await database.ref(`leads/${year}/${month}`).once('value');
+            snapshot.forEach(leadSnapshot => {
+                totalLeads++;
+                const lead = leadSnapshot.val();
+                if (lead.status === 'Vendido') soldLeads++;
+                if (lead.visitDate) totalVisits++;
+            });
+        }
+        
+        // Atualizar estatísticas
+        totalLeadsElement.textContent = totalLeads;
+        visitsThisMonthElement.textContent = totalVisits;
+        
+        const conversionRate = totalLeads > 0 ? Math.round((soldLeads / totalLeads) * 100) : 0;
+        conversionRateElement.textContent = `${conversionRate}%`;
+        
+        // Carregar gráficos
+        await loadCharts(year, month);
+        
+    } catch (error) {
+        console.error('Erro ao carregar estatísticas:', error);
+    }
+}
+
+async function loadDirectorLeads() {
+    try {
+        const year = yearFilter.value;
+        const month = monthFilter.value;
+        const tbody = document.querySelector('#directorLeadsTable tbody');
+        tbody.innerHTML = '';
+        
+        let leads = [];
+        
+        if (year === 'all') {
+            const snapshot = await database.ref('leads').once('value');
+            snapshot.forEach(yearSnapshot => {
+                yearSnapshot.forEach(monthSnapshot => {
+                    monthSnapshot.forEach(leadSnapshot => {
+                        leads.push({
+                            id: leadSnapshot.key,
+                            ...leadSnapshot.val()
+                        });
+                    });
+                });
+            });
+        } else if (month === 'all') {
+            const snapshot = await database.ref(`leads/${year}`).once('value');
+            snapshot.forEach(monthSnapshot => {
+                monthSnapshot.forEach(leadSnapshot => {
+                    leads.push({
+                        id: leadSnapshot.key,
+                        ...leadSnapshot.val()
+                    });
+                });
+            });
+        } else {
+            const snapshot = await database.ref(`leads/${year}/${month}`).once('value');
+            snapshot.forEach(leadSnapshot => {
+                leads.push({
+                    id: leadSnapshot.key,
+                    ...leadSnapshot.val()
+                });
+            });
+        }
+        
+        // Ordenar por data mais recente
+        leads.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        
+        // Limitar a 50 leads
+        leads = leads.slice(0, 50);
+        
+        // Preencher tabela
+        leads.forEach(lead => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${formatDate(lead.timestamp)}</td>
+                <td>${lead.name}</td>
+                <td>${lead.phone}</td>
+                <td>${lead.product}</td>
+                <td><span class="status-badge status-${lead.status.toLowerCase().replace(' ', '-')}">${lead.status}</span></td>
+                <td>${lead.sellerName || lead.sellerEmail}</td>
+                <td>${lead.city}</td>
+                <td>${formatDate(lead.visitDate)}</td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+    } catch (error) {
+        console.error('Erro ao carregar leads:', error);
+    }
+}
+
+async function loadSellersForDirector() {
+    try {
+        // Nota: Em produção, você teria uma coleção de usuários
+        // Por enquanto, vamos contar leads por vendedor
+        const snapshot = await database.ref('leads').once('value');
+        const sellersMap = new Map();
+        
+        snapshot.forEach(yearSnapshot => {
+            yearSnapshot.forEach(monthSnapshot => {
+                monthSnapshot.forEach(leadSnapshot => {
+                    const lead = leadSnapshot.val();
+                    const sellerEmail = lead.sellerEmail;
+                    
+                    if (sellerEmail) {
+                        if (!sellersMap.has(sellerEmail)) {
+                            sellersMap.set(sellerEmail, {
+                                name: lead.sellerName || sellerEmail,
+                                email: sellerEmail,
+                                leadCount: 0
+                            });
+                        }
+                        sellersMap.get(sellerEmail).leadCount++;
+                    }
+                });
+            });
+        });
+        
+        totalSellersElement.textContent = sellersMap.size;
+        
+    } catch (error) {
+        console.error('Erro ao carregar vendedores:', error);
+    }
+}
+
+async function loadCharts(year, month) {
+    try {
+        // Leads por Vendedor
+        const sellersSnapshot = await database.ref('leads').once('value');
+        const sellerData = {};
+        
+        sellersSnapshot.forEach(yearSnapshot => {
+            if (year === 'all' || yearSnapshot.key === year) {
+                yearSnapshot.forEach(monthSnapshot => {
+                    if (month === 'all' || monthSnapshot.key === month) {
+                        monthSnapshot.forEach(leadSnapshot => {
+                            const lead = leadSnapshot.val();
+                            const seller = lead.sellerEmail || 'Desconhecido';
+                            sellerData[seller] = (sellerData[seller] || 0) + 1;
+                        });
+                    }
+                });
+            }
+        });
+        
+        // Leads por Status
+        const statusSnapshot = await database.ref('leads').once('value');
+        const statusData = {};
+        
+        statusSnapshot.forEach(yearSnapshot => {
+            if (year === 'all' || yearSnapshot.key === year) {
+                yearSnapshot.forEach(monthSnapshot => {
+                    if (month === 'all' || monthSnapshot.key === month) {
+                        monthSnapshot.forEach(leadSnapshot => {
+                            const lead = leadSnapshot.val();
+                            const status = lead.status || 'Desconhecido';
+                            statusData[status] = (statusData[status] || 0) + 1;
+                        });
+                    }
+                });
+            }
+        });
+        
+        // Destruir gráficos existentes
+        if (chartInstances.leadsBySeller) {
+            chartInstances.leadsBySeller.destroy();
+        }
+        if (chartInstances.leadsByStatus) {
+            chartInstances.leadsByStatus.destroy();
+        }
+        
+        // Criar gráfico de leads por vendedor
+        const sellerCtx = document.getElementById('leadsBySellerChart').getContext('2d');
+        chartInstances.leadsBySeller = new Chart(sellerCtx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(sellerData),
+                datasets: [{
+                    label: 'Leads por Vendedor',
+                    data: Object.values(sellerData),
+                    backgroundColor: '#367C2B',
+                    borderColor: '#2a5f21',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+        
+        // Criar gráfico de leads por status
+        const statusCtx = document.getElementById('leadsByStatusChart').getContext('2d');
+        chartInstances.leadsByStatus = new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(statusData),
+                datasets: [{
+                    data: Object.values(statusData),
+                    backgroundColor: [
+                        '#367C2B',
+                        '#FFDE00',
+                        '#2196F3',
+                        '#9C27B0',
+                        '#FF9800',
+                        '#4CAF50',
+                        '#F44336'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+        
+    } catch (error) {
+        console.error('Erro ao carregar gráficos:', error);
+    }
+}
+
+// ========== FUNÇÕES DO SUPERVISOR ==========
+
+function loadSupervisorPanel() {
+    // Mostrar/ocultar formulário de novo vendedor
+    addSellerBtn.addEventListener('click', () => {
+        newSellerForm.style.display = 'block';
+        addSellerBtn.style.display = 'none';
+    });
+    
+    cancelSellerBtn.addEventListener('click', () => {
+        newSellerForm.style.display = 'none';
+        addSellerBtn.style.display = 'flex';
+        sellerForm.reset();
+    });
+    
+    // Formulário de cadastro de vendedor
+    sellerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const name = document.getElementById('sellerName').value;
+        const email = document.getElementById('sellerEmail').value;
+        const password = document.getElementById('sellerPassword').value;
+        const confirmPassword = document.getElementById('sellerConfirmPassword').value;
+        
+        if (password !== confirmPassword) {
+            showMessage('As senhas não coincidem!', 'error');
+            return;
+        }
+        
+        try {
+            // Criar usuário no Firebase Authentication
+            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+            
+            // Aqui você poderia salvar informações adicionais no Realtime Database
+            const userId = userCredential.user.uid;
+            
+            showMessage('Vendedor cadastrado com sucesso!', 'success');
+            sellerForm.reset();
+            newSellerForm.style.display = 'none';
+            addSellerBtn.style.display = 'flex';
+            
+            // Recarregar lista de vendedores
+            loadSellersList();
+            
+        } catch (error) {
+            showMessage('Erro ao cadastrar vendedor: ' + error.message, 'error');
+        }
+    });
+    
+    // Carregar lista de vendedores
+    loadSellersList();
+    
+    // Carregar leads do supervisor
+    loadSupervisorLeads();
+}
+
+async function loadSellersList() {
+    try {
+        // Nota: Em produção, você teria uma coleção de usuários
+        // Por enquanto, vamos listar vendedores baseado nos emails dos leads
+        const snapshot = await database.ref('leads').once('value');
+        const sellersMap = new Map();
+        
+        snapshot.forEach(yearSnapshot => {
+            yearSnapshot.forEach(monthSnapshot => {
+                monthSnapshot.forEach(leadSnapshot => {
+                    const lead = leadSnapshot.val();
+                    const sellerEmail = lead.sellerEmail;
+                    
+                    if (sellerEmail && !sellerEmail.includes('@supervisorglobal') && 
+                        !sellerEmail.includes('@diretorglobal')) {
+                        
+                        if (!sellersMap.has(sellerEmail)) {
+                            sellersMap.set(sellerEmail, {
+                                name: lead.sellerName || sellerEmail.split('@')[0],
+                                email: sellerEmail,
+                                leadCount: 0,
+                                active: true
+                            });
+                        }
+                        sellersMap.get(sellerEmail).leadCount++;
+                    }
+                });
+            });
+        });
+        
+        // Preencher tabela
+        const tbody = sellersTable.querySelector('tbody');
+        tbody.innerHTML = '';
+        
+        sellersMap.forEach((seller, email) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${seller.name}</td>
+                <td>${seller.email}</td>
+                <td>${seller.leadCount}</td>
+                <td><span class="status-badge ${seller.active ? 'status-vendido' : 'status-perdido'}">
+                    ${seller.active ? 'Ativo' : 'Inativo'}
+                </span></td>
+                <td>
+                    <button class="action-btn edit" onclick="editSeller('${email}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="action-btn delete" onclick="toggleSellerStatus('${email}', ${seller.active})">
+                        <i class="fas fa-${seller.active ? 'ban' : 'check'}"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+    } catch (error) {
+        console.error('Erro ao carregar vendedores:', error);
+    }
+}
+
+async function loadSupervisorLeads() {
+    try {
+        const tbody = document.querySelector('#supervisorLeadsTable tbody');
+        tbody.innerHTML = '';
+        
+        const snapshot = await database.ref('leads').once('value');
+        const leads = [];
+        
+        snapshot.forEach(yearSnapshot => {
+            yearSnapshot.forEach(monthSnapshot => {
+                monthSnapshot.forEach(leadSnapshot => {
+                    leads.push({
+                        id: leadSnapshot.key,
+                        ...leadSnapshot.val()
+                    });
+                });
+            });
+        });
+        
+        // Ordenar por data mais recente
+        leads.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        
+        // Preencher tabela
+        leads.forEach(lead => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${formatDate(lead.timestamp)}</td>
+                <td>${lead.name}</td>
+                <td>${lead.phone}</td>
+                <td>${lead.product}</td>
+                <td><span class="status-badge status-${lead.status.toLowerCase().replace(' ', '-')}">${lead.status}</span></td>
+                <td>${lead.sellerName || lead.sellerEmail}</td>
+                <td>
+                    <button class="action-btn edit" onclick="editLead('${lead.id}', '${lead.year}', '${lead.month}')">
+                        <i class="fas fa-edit"></i> Editar
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+    } catch (error) {
+        console.error('Erro ao carregar leads do supervisor:', error);
+    }
+}
+
+// ========== FUNÇÕES DO VENDEDOR ==========
+
+function loadSellerPanel() {
+    // Configurar data atual no campo de visita
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('leadVisitDate').value = today;
+    
+    // Mostrar/ocultar formulário de novo lead
+    addLeadBtn.addEventListener('click', () => {
+        newLeadForm.style.display = 'block';
+        addLeadBtn.style.display = 'none';
+    });
+    
+    cancelLeadBtn.addEventListener('click', () => {
+        newLeadForm.style.display = 'none';
+        addLeadBtn.style.display = 'flex';
+        leadForm.reset();
+        document.getElementById('leadVisitDate').value = today;
+    });
+    
+    // Formulário de lead
+    leadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        if (!currentUser) return;
+        
+        const leadData = {
+            name: document.getElementById('leadName').value,
+            phone: document.getElementById('leadPhone').value,
+            email: document.getElementById('leadEmail').value,
+            city: document.getElementById('leadCity').value,
+            product: document.getElementById('leadProduct').value,
+            status: document.getElementById('leadStatus').value,
+            visitDate: document.getElementById('leadVisitDate').value,
+            notes: document.getElementById('leadNotes').value,
+            sellerEmail: currentUser.email,
+            sellerName: currentUser.displayName || currentUser.email.split('@')[0],
+            timestamp: new Date().toISOString()
+        };
+        
+        try {
+            const { year, month } = getCurrentYearMonth();
+            const newLeadRef = database.ref(`leads/${year}/${month}`).push();
+            await newLeadRef.set({
+                ...leadData,
+                year,
+                month
+            });
+            
+            showMessage('Lead cadastrado com sucesso!', 'success');
+            leadForm.reset();
+            document.getElementById('leadVisitDate').value = today;
+            newLeadForm.style.display = 'none';
+            addLeadBtn.style.display = 'flex';
+            
+            // Recarregar lista de leads
+            loadSellerLeads();
+            
+        } catch (error) {
+            showMessage('Erro ao cadastrar lead: ' + error.message, 'error');
+        }
+    });
+    
+    // Configurar filtros
+    filterStatus.addEventListener('change', loadSellerLeads);
+    filterCity.addEventListener('input', loadSellerLeads);
+    filterDate.addEventListener('change', loadSellerLeads);
+    
+    clearFilters.addEventListener('click', () => {
+        filterStatus.value = 'all';
+        filterCity.value = '';
+        filterDate.value = '';
+        loadSellerLeads();
+    });
+    
+    // Carregar leads iniciais
+    loadSellerLeads();
+}
+
+async function loadSellerLeads() {
+    if (!currentUser) return;
+    
+    try {
+        const tbody = sellerLeadsTable.querySelector('tbody');
+        tbody.innerHTML = '';
+        
+        const statusFilter = filterStatus.value;
+        const cityFilter = filterCity.value.toLowerCase();
+        const dateFilter = filterDate.value;
+        
+        const snapshot = await database.ref('leads').once('value');
+        const leads = [];
+        
+        snapshot.forEach(yearSnapshot => {
+            yearSnapshot.forEach(monthSnapshot => {
+                monthSnapshot.forEach(leadSnapshot => {
+                    const lead = leadSnapshot.val();
+                    
+                    // Filtrar apenas leads do vendedor atual
+                    if (lead.sellerEmail === currentUser.email) {
+                        // Aplicar filtros
+                        if (statusFilter !== 'all' && lead.status !== statusFilter) return;
+                        if (cityFilter && !lead.city.toLowerCase().includes(cityFilter)) return;
+                        if (dateFilter && lead.visitDate !== dateFilter) return;
+                        
+                        leads.push({
+                            id: leadSnapshot.key,
+                            year: yearSnapshot.key,
+                            month: monthSnapshot.key,
+                            ...lead
+                        });
+                    }
+                });
+            });
+        });
+        
+        // Ordenar por data mais recente
+        leads.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        
+        // Preencher tabela
+        leads.forEach(lead => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${formatDate(lead.timestamp)}</td>
+                <td>${lead.name}</td>
+                <td>${lead.phone}</td>
+                <td>${lead.product}</td>
+                <td><span class="status-badge status-${lead.status.toLowerCase().replace(' ', '-')}">${lead.status}</span></td>
+                <td>${lead.city}</td>
+                <td>${formatDate(lead.visitDate)}</td>
+                <td>
+                    <button class="action-btn edit" onclick="editLead('${lead.id}', '${lead.year}', '${lead.month}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="action-btn delete" onclick="deleteLead('${lead.id}', '${lead.year}', '${lead.month}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+    } catch (error) {
+        console.error('Erro ao carregar leads:', error);
+    }
+}
+
+// ========== FUNÇÕES GLOBAIS ==========
+
+async function editLead(leadId, year, month) {
+    try {
+        const snapshot = await database.ref(`leads/${year}/${month}/${leadId}`).once('value');
+        const lead = snapshot.val();
+        
+        if (!lead) return;
+        
+        // Preencher modal com formulário de edição
+        const modalBody = document.querySelector('.modal-body');
+        modalBody.innerHTML = `
+            <form id="editLeadForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nome Completo</label>
+                        <input type="text" id="editLeadName" value="${lead.name}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Telefone</label>
+                        <input type="tel" id="editLeadPhone" value="${lead.phone}" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>E-mail</label>
+                        <input type="email" id="editLeadEmail" value="${lead.email || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>Cidade</label>
+                        <input type="text" id="editLeadCity" value="${lead.city}" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Produto</label>
+                        <select id="editLeadProduct" required>
+                            <option value="Trator" ${lead.product === 'Trator' ? 'selected' : ''}>Trator</option>
+                            <option value="Colheitadeira" ${lead.product === 'Colheitadeira' ? 'selected' : ''}>Colheitadeira</option>
+                            <option value="Pulverizador" ${lead.product === 'Pulverizador' ? 'selected' : ''}>Pulverizador</option>
+                            <option value="Plantadeira" ${lead.product === 'Plantadeira' ? 'selected' : ''}>Plantadeira</option>
+                            <option value="Implementos" ${lead.product === 'Implementos' ? 'selected' : ''}>Implementos</option>
+                            <option value="Peças" ${lead.product === 'Peças' ? 'selected' : ''}>Peças</option>
+                            <option value="Outros" ${lead.product === 'Outros' ? 'selected' : ''}>Outros</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="editLeadStatus" required>
+                            <option value="Novo" ${lead.status === 'Novo' ? 'selected' : ''}>Novo</option>
+                            <option value="Contatado" ${lead.status === 'Contatado' ? 'selected' : ''}>Contatado</option>
+                            <option value="Visita Agendada" ${lead.status === 'Visita Agendada' ? 'selected' : ''}>Visita Agendada</option>
+                            <option value="Visita Realizada" ${lead.status === 'Visita Realizada' ? 'selected' : ''}>Visita Realizada</option>
+                            <option value="Negociação" ${lead.status === 'Negociação' ? 'selected' : ''}>Negociação</option>
+                            <option value="Vendido" ${lead.status === 'Vendido' ? 'selected' : ''}>Vendido</option>
+                            <option value="Perdido" ${lead.status === 'Perdido' ? 'selected' : ''}>Perdido</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Data da Visita</label>
+                        <input type="date" id="editLeadVisitDate" value="${lead.visitDate}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Observações</label>
+                        <textarea id="editLeadNotes" rows="3">${lead.notes || ''}</textarea>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Salvar Alterações
+                    </button>
+                    <button type="button" class="btn btn-outline close-modal">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        `;
+        
+        // Mostrar modal
+        editModal.classList.add('active');
+        
+        // Configurar submit do formulário
+        const editForm = document.getElementById('editLeadForm');
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const updatedLead = {
+                ...lead,
+                name: document.getElementById('editLeadName').value,
+                phone: document.getElementById('editLeadPhone').value,
+                email: document.getElementById('editLeadEmail').value,
+                city: document.getElementById('editLeadCity').value,
+                product: document.getElementById('editLeadProduct').value,
+                status: document.getElementById('editLeadStatus').value,
+                visitDate: document.getElementById('editLeadVisitDate').value,
+                notes: document.getElementById('editLeadNotes').value
+            };
+            
+            try {
+                await database.ref(`leads/${year}/${month}/${leadId}`).update(updatedLead);
+                showMessage('Lead atualizado com sucesso!', 'success');
+                editModal.classList.remove('active');
+                
+                // Recarregar leads
+                if (userRole === 'vendedor') {
+                    loadSellerLeads();
+                } else if (userRole === 'supervisor') {
+                    loadSupervisorLeads();
+                }
+                
+            } catch (error) {
+                showMessage('Erro ao atualizar lead: ' + error.message, 'error');
+            }
+        });
+        
+    } catch (error) {
+        console.error('Erro ao carregar lead para edição:', error);
+    }
+}
+
+async function deleteLead(leadId, year, month) {
+    if (!confirm('Tem certeza que deseja excluir este lead?')) return;
+    
+    try {
+        await database.ref(`leads/${year}/${month}/${leadId}`).remove();
+        showMessage('Lead excluído com sucesso!', 'success');
+        
+        // Recarregar leads
+        if (userRole === 'vendedor') {
+            loadSellerLeads();
+        } else if (userRole === 'supervisor') {
+            loadSupervisorLeads();
+        }
+        
+    } catch (error) {
+        showMessage('Erro ao excluir lead: ' + error.message, 'error');
+    }
+}
+
+// Fechar modal
+closeModal.addEventListener('click', () => {
+    editModal.classList.remove('active');
+});
+
+editModal.addEventListener('click', (e) => {
+    if (e.target === editModal) {
+        editModal.classList.remove('active');
+    }
+});
+
+// Observar estado de autenticação
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        currentUser = user;
+        userRole = detectUserRole(user.email);
+        
+        // Atualizar interface
+        userEmail.textContent = user.email;
+        userRoleBadge.textContent = userRole.charAt(0).toUpperCase() + userRole.slice(1);
+        
+        // Criar menu
+        createSidebarMenu(userRole);
+        
+        // Mostrar sistema
+        loginScreen.classList.remove('active');
+        mainSystem.classList.add('active');
+        
+        // Mostrar painel inicial
+        if (userRole === 'diretor') {
+            showPanel('directorDashboard');
+        } else if (userRole === 'supervisor') {
+            showPanel('supervisorPanel');
+        } else {
+            showPanel('sellerPanel');
+        }
+    }
+});
+
+// Inicializar data atual no campo de data da visita
+window.addEventListener('load', () => {
+    const today = new Date().toISOString().split('T')[0];
+    if (document.getElementById('leadVisitDate')) {
+        document.getElementById('leadVisitDate').value = today;
+    }
+});
