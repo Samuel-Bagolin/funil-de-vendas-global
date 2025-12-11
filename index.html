@@ -5,20 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Funil de Vendas - Global</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Firebase SDK -->
-    <script type="importmap">
-    {
-        "imports": {
-            "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
-            "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js",
-            "firebase/database": "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js",
-            "firebase/analytics": "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js"
-        }
-    }
-    </script>
-    <script type="module" src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script type="module" src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script type="module" src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    
+    <!-- Firebase SDKs (versão compatível) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script>
+    
     <style>
         /* RESET E BASE */
         * {
@@ -598,13 +591,13 @@
     <!-- TELA DE LOGIN -->
     <div id="loginScreen" class="login-container">
         <div class="login-box">
-            <img src="https://encurtador.com.br/jiRd" alt="Logo Global" class="logo-login">
+            <img src="https://encurtador.com.br/jiRd" alt="Logo Global" class="logo-login" onerror="this.src='https://via.placeholder.com/180x60/367C2B/FFFFFF?text=LOGO+GLOBAL'">
             <h2 class="login-title">Sistema de Funil de Vendas</h2>
             <p class="login-subtitle">Acesso restrito para equipe comercial</p>
             
             <form id="loginForm">
-                <input type="email" id="loginEmail" class="login-input" placeholder="E-mail corporativo" required>
-                <input type="password" id="loginPassword" class="login-input" placeholder="Senha" required>
+                <input type="email" id="loginEmail" class="login-input" placeholder="E-mail corporativo" required value="teste@diretorglobal.com.br">
+                <input type="password" id="loginPassword" class="login-input" placeholder="Senha" required value="123456">
                 <button type="submit" class="login-btn" id="loginBtn">
                     <span id="loginBtnText">Entrar no Sistema</span>
                 </button>
@@ -632,7 +625,7 @@
         <!-- HEADER -->
         <header class="dashboard-header">
             <div class="logo-section">
-                <img src="https://encurtador.com.br/jiRd" alt="Logo Global" class="logo-dashboard">
+                <img src="https://encurtador.com.br/jiRd" alt="Logo Global" class="logo-dashboard" onerror="this.src='https://via.placeholder.com/180x45/367C2B/FFFFFF?text=LOGO+GLOBAL'">
             </div>
             
             <div class="user-info">
@@ -733,7 +726,7 @@
                             <div class="stat-value" id="statMonthlyVisits">0</div>
                             <div class="stat-trend">
                                 <i class="fas fa-calendar-alt"></i>
-                                <span id="statMonthLabel">Ago 2024</span>
+                                <span id="statMonthLabel">Dez 2025</span>
                             </div>
                         </div>
                     </div>
@@ -746,7 +739,7 @@
                             </h3>
                             <div class="chart-placeholder" id="chartStatus">
                                 <i class="fas fa-chart-pie" style="font-size: 48px; margin-bottom: 15px; color: #ccc;"></i>
-                                <p>Grafíco de distribuição de leads por status</p>
+                                <p>Gráfico de distribuição de leads por status</p>
                             </div>
                         </div>
                         
@@ -1082,7 +1075,7 @@
         
         <!-- RODAPÉ -->
         <footer style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6; text-align: center; color: #666; font-size: 12px;">
-            Sistema de Funil de Vendas Global &copy; 2024 • Desenvolvido com Firebase Realtime Database
+            Sistema de Funil de Vendas Global &copy; 2025 • Desenvolvido com Firebase Realtime Database
         </footer>
     </div>
 
@@ -1128,7 +1121,7 @@
     </div>
 
     <!-- SCRIPT PRINCIPAL -->
-    <script type="module">
+    <script>
         // ================ CONFIGURAÇÃO FIREBASE ================
         const firebaseConfig = {
             apiKey: "AIzaSyAuCkAymqWECmPWDShZNXrGoFCnSYbWFSo",
@@ -1142,11 +1135,10 @@
         };
 
         // Inicializar Firebase
-        firebase.initializeApp(firebaseConfig);
+        const app = firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const database = firebase.database();
-        const analytics = firebase.analytics();
-
+        
         // ================ VARIÁVEIS GLOBAIS ================
         let currentUser = null;
         let userRole = null;
@@ -1165,7 +1157,7 @@
                 return 'diretor';
             } else if (emailLower.includes('supervisorglobal') || emailLower === 'teste@supervisorglobal.com.br') {
                 return 'supervisor';
-            } else if (emailLower.includes('vendedorglobal') || emailLower.includes('teste') || emailLower.includes('vendedor')) {
+            } else if (emailLower.includes('vendedorglobal') || emailLower.includes('teste1') || emailLower.includes('vendedor')) {
                 return 'vendedor';
             }
             
@@ -1194,7 +1186,11 @@
                 item.classList.remove('active');
             });
             
-            document.querySelector(`.menu-item[data-page="${pageId.replace('page', '').toLowerCase()}"]`).classList.add('active');
+            const pageName = pageId.replace('page', '').toLowerCase();
+            const menuItem = document.querySelector(`.menu-item[data-page="${pageName}"]`);
+            if (menuItem) {
+                menuItem.classList.add('active');
+            }
         }
 
         function updateUIForRole() {
@@ -1238,7 +1234,7 @@
                 document.getElementById('profileRole').value = 
                     userRole === 'diretor' ? 'Diretor' : 
                     userRole === 'supervisor' ? 'Supervisor' : 'Vendedor';
-                document.getElementById('profileCreated').value = new Date(currentUser.metadata.creationTime).toLocaleDateString('pt-BR');
+                document.getElementById('profileCreated').value = new Date(currentUser.metadata.createdAt).toLocaleDateString('pt-BR');
             }
         }
 
@@ -1259,15 +1255,12 @@
                     currentUser = userCredential.user;
                     userRole = detectUserRole(currentUser.email);
                     
-                    // Registrar login no analytics
-                    analytics.logEvent('login', { method: 'email', role: userRole });
-                    
-                    // Carregar dados iniciais
-                    loadInitialData();
-                    
                     // Atualizar UI
                     updateUIForRole();
                     showScreen('dashboardScreen');
+                    
+                    // Carregar dados iniciais
+                    loadInitialData();
                     
                     // Redirecionar conforme perfil
                     if (userRole === 'vendedor') {
@@ -1309,6 +1302,10 @@
                 showScreen('loginScreen');
                 document.getElementById('loginForm').reset();
                 document.getElementById('loginError').style.display = 'none';
+                
+                // Restaurar valores padrão para facilitar teste
+                document.getElementById('loginEmail').value = 'teste@diretorglobal.com.br';
+                document.getElementById('loginPassword').value = '123456';
             });
         }
 
@@ -1348,6 +1345,10 @@
             
             // Preencher filtro de vendedor
             populateSellerFilter();
+            
+            // Configurar data atual no formulário
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('leadVisitDate').value = today;
         }
 
         function loadLeads() {
@@ -1355,13 +1356,8 @@
             const currentYear = today.getFullYear();
             const currentMonth = String(today.getMonth() + 1).padStart(2, '0');
             
-            // Construir caminho base conforme perfil
+            // Construir caminho base
             let basePath = `leads/${currentYear}/${currentMonth}`;
-            
-            // Se for vendedor, carregar apenas seus leads
-            if (userRole === 'vendedor') {
-                basePath = `leads/${currentYear}/${currentMonth}`;
-            }
             
             database.ref(basePath).once('value')
                 .then((snapshot) => {
@@ -2317,13 +2313,6 @@
                 if (password.length < 6) {
                     alert('A senha deve ter pelo menos 6 caracteres.');
                     return;
-                }
-                
-                // Validar e-mail (deve terminar com vendedorglobal.com.br para vendedores)
-                if (!email.toLowerCase().includes('vendedorglobal') && !email.includes('teste')) {
-                    if (!confirm('Este e-mail não é do domínio vendedorglobal.com.br. Deseja continuar mesmo assim?')) {
-                        return;
-                    }
                 }
                 
                 const userData = { name, email, password };
