@@ -3,505 +3,237 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Global - Funil de Vendas</title>
+    <title>Funil de Vendas Profissional - John Deere Edition</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase CDN (Versão 9.6.1 compatível com o código de configuração fornecido) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
 </head>
 <body>
-    <!-- Tela de Login -->
-    <section id="loginScreen" class="screen active">
-        <div class="login-container">
-            <div class="login-header">
-                <img src="https://encurtador.com.br/jiRd" alt="Logo Global" class="logo">
-                <h1>Funil de Vendas SaaS</h1>
-                <p class="subtitle">Sistema profissional de gerenciamento</p>
-            </div>
-            
-            <div class="login-form">
-                <div class="form-group">
-                    <label for="email"><i class="fas fa-envelope"></i> E-mail</label>
-                    <input type="email" id="email" placeholder="seu@email.com">
-                </div>
-                
-                <div class="form-group">
-                    <label for="password"><i class="fas fa-lock"></i> Senha</label>
-                    <input type="password" id="password" placeholder="Sua senha">
-                </div>
-                
-                <button id="loginBtn" class="btn btn-primary">
-                    <i class="fas fa-sign-in-alt"></i> Entrar
-                </button>
-                
-                <button id="forgotPasswordBtn" class="btn btn-link">
-                    <i class="fas fa-key"></i> Esqueci minha senha
-                </button>
-                
-                <div id="loginError" class="error-message"></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Layout Principal -->
-    <section id="mainScreen" class="screen">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-left">
-                <img src="https://encurtador.com.br/jiRd" alt="Logo Global" class="header-logo">
-                <h2>Funil de Vendas</h2>
-            </div>
-            <div class="header-right">
-                <span id="userInfo" class="user-info"></span>
-                <button id="logoutBtn" class="btn btn-secondary btn-sm">
-                    <i class="fas fa-sign-out-alt"></i> Sair
-                </button>
-            </div>
-        </header>
-
-        <!-- Menu Lateral -->
-        <nav class="sidebar">
-            <ul class="nav-menu" id="navMenu">
-                <!-- Itens serão preenchidos por JS baseado no role -->
-            </ul>
+    <header id="main-header">
+        <img src="logo.png" alt="Logo John Deere" id="app-logo">
+        <h1>Funil de Vendas SaaS</h1>
+        <nav id="main-nav" style="display: none;">
+            <button id="nav-dashboard-supervisor" class="nav-btn" data-screen="supervisor-dashboard-screen" style="display: none;">Dashboard Geral</button>
+            <button id="nav-manage-sellers" class="nav-btn" data-screen="manage-sellers-screen" style="display: none;">Gerenciar Vendedores</button>
+            <button id="nav-dashboard-seller" class="nav-btn" data-screen="seller-dashboard-screen" style="display: none;">Meu Dashboard</button>
+            <button id="nav-list-leads" class="nav-btn" data-screen="list-leads-screen" style="display: none;">Meus Leads</button>
+            <button id="nav-add-lead" class="nav-btn" data-screen="add-lead-screen" style="display: none;">Novo Lead</button>
+            <button id="logout-btn" class="nav-btn" style="display: none;">Sair</button>
         </nav>
+    </header>
 
-        <!-- Conteúdo Principal -->
-        <main class="main-content">
-            <!-- Dashboard Supervisor -->
-            <section id="dashboardSupervisor" class="content-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-chart-line"></i> Dashboard Supervisor</h2>
-                    <div class="date-filter">
-                        <select id="dashboardMonth">
-                            <option value="0">Janeiro</option>
-                            <option value="1">Fevereiro</option>
-                            <option value="2">Março</option>
-                            <option value="3">Abril</option>
-                            <option value="4">Maio</option>
-                            <option value="5">Junho</option>
-                            <option value="6">Julho</option>
-                            <option value="7">Agosto</option>
-                            <option value="8">Setembro</option>
-                            <option value="9">Outubro</option>
-                            <option value="10">Novembro</option>
-                            <option value="11" selected>Dezembro</option>
-                        </select>
-                        <select id="dashboardYear">
-                            <option value="2024">2024</option>
-                            <option value="2025" selected>2025</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon green">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3 id="totalLeads">0</h3>
-                            <p>Total de Leads</p>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon yellow">
-                            <i class="fas fa-chart-bar"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3 id="conversionRate">0%</h3>
-                            <p>Taxa de Conversão</p>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon black">
-                            <i class="fas fa-user-tie"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3 id="activeSellers">0</h3>
-                            <p>Vendedores Ativos</p>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon dark-gray">
-                            <i class="fas fa-money-bill-wave"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3 id="wonDeals">0</h3>
-                            <p>Negócios Fechados</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="charts-grid">
-                    <div class="chart-container">
-                        <h3><i class="fas fa-chart-pie"></i> Leads por Status</h3>
-                        <canvas id="statusChart"></canvas>
-                    </div>
-                    
-                    <div class="chart-container">
-                        <h3><i class="fas fa-user-friends"></i> Leads por Vendedor</h3>
-                        <canvas id="sellerChart"></canvas>
-                    </div>
-                </div>
-                
-                <div class="table-container">
-                    <h3><i class="fas fa-history"></i> Últimos Leads</h3>
-                    <div class="table-responsive">
-                        <table id="recentLeadsTable">
-                            <thead>
-                                <tr>
-                                    <th>Nome</th>
-                                    <th>Telefone</th>
-                                    <th>Cidade</th>
-                                    <th>Status</th>
-                                    <th>Vendedor</th>
-                                    <th>Data</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Cadastro de Vendedores -->
-            <section id="sellerRegister" class="content-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-user-plus"></i> Cadastrar Vendedor</h2>
-                </div>
-                
-                <div class="form-container">
-                    <form id="sellerForm">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="sellerName"><i class="fas fa-user"></i> Nome Completo *</label>
-                                <input type="text" id="sellerName" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="sellerEmail"><i class="fas fa-envelope"></i> E-mail *</label>
-                                <input type="email" id="sellerEmail" required>
-                            </div>
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="sellerPhone"><i class="fas fa-phone"></i> Telefone *</label>
-                                <input type="tel" id="sellerPhone" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="sellerPassword"><i class="fas fa-lock"></i> Senha *</label>
-                                <input type="password" id="sellerPassword" required minlength="6">
-                            </div>
-                        </div>
-                        
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Cadastrar Vendedor
-                            </button>
-                        </div>
-                    </form>
-                </div>
-                
-                <div class="table-container mt-4">
-                    <h3><i class="fas fa-list"></i> Vendedores Cadastrados</h3>
-                    <div class="table-responsive">
-                        <table id="sellersTable">
-                            <thead>
-                                <tr>
-                                    <th>Nome</th>
-                                    <th>E-mail</th>
-                                    <th>Telefone</th>
-                                    <th>Status</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Cadastro de Leads -->
-            <section id="leadRegister" class="content-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-plus-circle"></i> Cadastrar Novo Lead</h2>
-                </div>
-                
-                <div class="form-container">
-                    <form id="leadForm">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="leadName"><i class="fas fa-user"></i> Nome Completo *</label>
-                                <input type="text" id="leadName" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="leadPhone"><i class="fas fa-phone"></i> Telefone *</label>
-                                <input type="tel" id="leadPhone" required>
-                            </div>
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="leadEmail"><i class="fas fa-envelope"></i> E-mail *</label>
-                                <input type="email" id="leadEmail" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="leadCity"><i class="fas fa-map-marker-alt"></i> Cidade *</label>
-                                <input type="text" id="leadCity" required>
-                            </div>
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="leadProduct"><i class="fas fa-box"></i> Produto de Interesse *</label>
-                                <input type="text" id="leadProduct" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="leadStatus"><i class="fas fa-flag"></i> Status *</label>
-                                <select id="leadStatus" required>
-                                    <option value="">Selecione...</option>
-                                    <option value="novo">Novo</option>
-                                    <option value="contatado">Contatado</option>
-                                    <option value="qualificado">Qualificado</option>
-                                    <option value="proposta">Proposta Enviada</option>
-                                    <option value="negociacao">Em Negociação</option>
-                                    <option value="ganho">Ganho</option>
-                                    <option value="perdido">Perdido</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="leadVisitDate"><i class="fas fa-calendar-alt"></i> Data da Visita *</label>
-                                <input type="date" id="leadVisitDate" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="leadSeller"><i class="fas fa-user-tie"></i> Vendedor Responsável *</label>
-                                <select id="leadSeller" required>
-                                    <option value="">Selecione...</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group full-width">
-                                <label for="leadNotes"><i class="fas fa-sticky-note"></i> Observações</label>
-                                <textarea id="leadNotes" rows="3"></textarea>
-                            </div>
-                        </div>
-                        
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Salvar Lead
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </section>
-
-            <!-- Listagem de Leads -->
-            <section id="leadsList" class="content-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-list"></i> Lista de Leads</h2>
-                    <div class="filter-container">
-                        <select id="filterStatus">
-                            <option value="">Todos os Status</option>
-                            <option value="novo">Novo</option>
-                            <option value="contatado">Contatado</option>
-                            <option value="qualificado">Qualificado</option>
-                            <option value="proposta">Proposta Enviada</option>
-                            <option value="negociacao">Em Negociação</option>
-                            <option value="ganho">Ganho</option>
-                            <option value="perdido">Perdido</option>
-                        </select>
-                        
-                        <input type="text" id="filterCity" placeholder="Filtrar por cidade">
-                        
-                        <input type="date" id="filterDate">
-                        
-                        <button id="clearFilters" class="btn btn-secondary">
-                            <i class="fas fa-times"></i> Limpar
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="table-container">
-                    <div class="table-responsive">
-                        <table id="leadsTable">
-                            <thead>
-                                <tr>
-                                    <th>Nome</th>
-                                    <th>Telefone</th>
-                                    <th>E-mail</th>
-                                    <th>Cidade</th>
-                                    <th>Produto</th>
-                                    <th>Status</th>
-                                    <th>Data Visita</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Detalhes do Lead -->
-            <section id="leadDetails" class="content-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-eye"></i> Detalhes do Lead</h2>
-                    <button id="backToList" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Voltar
-                    </button>
-                </div>
-                
-                <div class="details-container" id="leadDetailsContent">
-                    <!-- Detalhes serão preenchidos por JS -->
-                </div>
-            </section>
-
-            <!-- Dashboard Vendedor -->
-            <section id="dashboardSeller" class="content-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-chart-line"></i> Meu Dashboard</h2>
-                </div>
-                
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon green">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3 id="myTotalLeads">0</h3>
-                            <p>Meus Leads</p>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon yellow">
-                            <i class="fas fa-fire"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3 id="myQualifiedLeads">0</h3>
-                            <p>Qualificados</p>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon black">
-                            <i class="fas fa-handshake"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3 id="myWonLeads">0</h3>
-                            <p>Ganhos</p>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon dark-gray">
-                            <i class="fas fa-percentage"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3 id="myConversion">0%</h3>
-                            <p>Minha Conversão</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="charts-grid">
-                    <div class="chart-container">
-                        <h3><i class="fas fa-chart-pie"></i> Meus Leads por Status</h3>
-                        <canvas id="myStatusChart"></canvas>
-                    </div>
-                    
-                    <div class="chart-container">
-                        <h3><i class="fas fa-city"></i> Meus Leads por Cidade</h3>
-                        <canvas id="myCityChart"></canvas>
-                    </div>
-                </div>
-            </section>
-        </main>
-    </section>
-
-    <!-- Modal Reset Senha -->
-    <div id="resetPasswordModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3><i class="fas fa-key"></i> Recuperar Senha</h3>
-                <button class="modal-close">&times;</button>
+    <main id="spa-container">
+        <!-- 1. Tela de Login -->
+        <section id="login-screen" class="screen active">
+            <div class="card login-card">
+                <h2>Acesso ao Sistema</h2>
+                <form id="login-form">
+                    <input type="email" id="login-email" placeholder="E-mail" required>
+                    <input type="password" id="login-password" placeholder="Senha" required>
+                    <button type="submit" class="btn btn-primary">Entrar</button>
+                </form>
+                <button id="forgot-password-btn" class="btn btn-link">Esqueci minha senha</button>
+                <p id="login-message" class="message-area"></p>
             </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="resetEmail">Digite seu e-mail</label>
-                    <input type="email" id="resetEmail" placeholder="seu@email.com">
-                </div>
-                <div class="form-actions">
-                    <button id="sendResetBtn" class="btn btn-primary">
-                        <i class="fas fa-paper-plane"></i> Enviar Link
-                    </button>
-                </div>
-                <div id="resetMessage"></div>
-            </div>
-        </div>
-    </div>
+        </section>
 
-    <!-- Modal Editar Lead -->
-    <div id="editLeadModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3><i class="fas fa-edit"></i> Editar Lead</h3>
-                <button class="modal-close">&times;</button>
+        <!-- 2. Tela do Supervisor - Dashboard Geral -->
+        <section id="supervisor-dashboard-screen" class="screen">
+            <h2>Dashboard Geral do Supervisor</h2>
+            <div class="dashboard-grid">
+                <div class="card metric-card">
+                    <h3>Leads no Mês</h3>
+                    <p id="metric-leads-month" class="metric-value">0</p>
+                </div>
+                <div class="card metric-card">
+                    <h3>Vendedores Ativos</h3>
+                    <p id="metric-active-sellers" class="metric-value">0</p>
+                </div>
+                <div class="card chart-card">
+                    <h3>Comparação Mês a Mês</h3>
+                    <canvas id="month-comparison-chart"></canvas>
+                </div>
+                <div class="card chart-card">
+                    <h3>Leads por Vendedor</h3>
+                    <canvas id="leads-by-seller-chart"></canvas>
+                </div>
+                <div class="card chart-card">
+                    <h3>Leads por Status</h3>
+                    <canvas id="leads-by-status-chart"></canvas>
+                </div>
             </div>
-            <div class="modal-body">
-                <form id="editLeadForm">
-                    <input type="hidden" id="editLeadId">
-                    <input type="hidden" id="editLeadYear">
-                    <input type="hidden" id="editLeadMonth">
-                    
-                    <div class="form-group">
-                        <label for="editLeadStatus">Status</label>
-                        <select id="editLeadStatus" required>
-                            <option value="novo">Novo</option>
-                            <option value="contatado">Contatado</option>
-                            <option value="qualificado">Qualificado</option>
-                            <option value="proposta">Proposta Enviada</option>
-                            <option value="negociacao">Em Negociação</option>
-                            <option value="ganho">Ganho</option>
-                            <option value="perdido">Perdido</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="editLeadNotes">Observações</label>
-                        <textarea id="editLeadNotes" rows="3"></textarea>
-                    </div>
-                    
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> Salvar
-                        </button>
-                    </div>
+        </section>
+
+        <!-- 3. Tela do Supervisor - Cadastro de Vendedores -->
+        <section id="manage-sellers-screen" class="screen">
+            <h2>Gerenciar Vendedores</h2>
+            <div class="card">
+                <h3>Cadastrar Novo Vendedor</h3>
+                <form id="add-seller-form">
+                    <input type="text" id="seller-name" placeholder="Nome do Vendedor" required>
+                    <input type="email" id="seller-email" placeholder="E-mail (Login)" required>
+                    <input type="password" id="seller-password" placeholder="Senha Inicial" required>
+                    <button type="submit" class="btn btn-primary">Cadastrar Vendedor</button>
+                </form>
+                <p id="add-seller-message" class="message-area"></p>
+            </div>
+
+            <div class="card mt-2">
+                <h3>Vendedores Cadastrados</h3>
+                <table id="sellers-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>E-mail</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Vendedores serão inseridos aqui pelo JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 4. Tela do Vendedor - Dashboard -->
+        <section id="seller-dashboard-screen" class="screen">
+            <h2>Meu Dashboard</h2>
+            <div class="dashboard-grid">
+                <div class="card metric-card">
+                    <h3>Meus Leads no Mês</h3>
+                    <p id="seller-metric-leads-month" class="metric-value">0</p>
+                </div>
+                <div class="card metric-card">
+                    <h3>Leads em Prospecção</h3>
+                    <p id="seller-metric-prospecting" class="metric-value">0</p>
+                </div>
+                <div class="card chart-card full-width">
+                    <h3>Meus Leads por Status</h3>
+                    <canvas id="seller-leads-by-status-chart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. Tela do Vendedor - Cadastro de Leads -->
+        <section id="add-lead-screen" class="screen">
+            <h2>Cadastrar Novo Lead</h2>
+            <div class="card">
+                <form id="add-lead-form">
+                    <input type="text" id="lead-name" placeholder="Nome" required>
+                    <input type="tel" id="lead-phone" placeholder="Telefone" required>
+                    <input type="email" id="lead-email" placeholder="E-mail" required>
+                    <input type="text" id="lead-city" placeholder="Cidade" required>
+                    <input type="text" id="lead-product" placeholder="Produto de interesse" required>
+                    <select id="lead-status" required>
+                        <option value="" disabled selected>Selecione o Status</option>
+                        <option value="Prospecção">Prospecção</option>
+                        <option value="Qualificação">Qualificação</option>
+                        <option value="Proposta Enviada">Proposta Enviada</option>
+                        <option value="Fechado">Fechado</option>
+                        <option value="Perdido">Perdido</option>
+                    </select>
+                    <textarea id="lead-observation" placeholder="Observação"></textarea>
+                    <label for="lead-visit-date">Data da Visita (Opcional):</label>
+                    <input type="date" id="lead-visit-date">
+                    <button type="submit" class="btn btn-primary">Salvar Lead</button>
+                </form>
+                <p id="add-lead-message" class="message-area"></p>
+            </div>
+        </section>
+
+        <!-- 6. Tela do Vendedor - Listagem de Leads -->
+        <section id="list-leads-screen" class="screen">
+            <h2>Meus Leads</h2>
+            <div class="card filter-card">
+                <h3>Filtros</h3>
+                <form id="filter-leads-form">
+                    <input type="date" id="filter-date-start" placeholder="Data Início">
+                    <input type="date" id="filter-date-end" placeholder="Data Fim">
+                    <input type="text" id="filter-city" placeholder="Filtrar por Cidade">
+                    <select id="filter-status">
+                        <option value="">Todos os Status</option>
+                        <option value="Prospecção">Prospecção</option>
+                        <option value="Qualificação">Qualificação</option>
+                        <option value="Proposta Enviada">Proposta Enviada</option>
+                        <option value="Fechado">Fechado</option>
+                        <option value="Perdido">Perdido</option>
+                    </select>
+                    <button type="submit" class="btn btn-secondary">Aplicar Filtros</button>
+                    <button type="button" id="clear-filters-btn" class="btn btn-link">Limpar</button>
                 </form>
             </div>
-        </div>
-    </div>
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js"></script>
-    
-    <!-- Script Principal -->
+            <div class="card mt-2">
+                <h3>Resultados</h3>
+                <table id="leads-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Cidade</th>
+                            <th>Status</th>
+                            <th>Data Cadastro</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Leads serão inseridos aqui pelo JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 7. Tela de Detalhes do Lead (oculta, usada dinamicamente) -->
+        <section id="lead-details-screen" class="screen">
+            <h2>Detalhes do Lead</h2>
+            <div class="card">
+                <form id="edit-lead-form">
+                    <input type="hidden" id="edit-lead-id">
+                    <label for="edit-lead-name">Nome:</label>
+                    <input type="text" id="edit-lead-name" required>
+
+                    <label for="edit-lead-phone">Telefone:</label>
+                    <input type="tel" id="edit-lead-phone" required>
+
+                    <label for="edit-lead-email">E-mail:</label>
+                    <input type="email" id="edit-lead-email" required>
+
+                    <label for="edit-lead-city">Cidade:</label>
+                    <input type="text" id="edit-lead-city" required>
+
+                    <label for="edit-lead-product">Produto de interesse:</label>
+                    <input type="text" id="edit-lead-product" required>
+
+                    <label for="edit-lead-status">Status:</label>
+                    <select id="edit-lead-status" required>
+                        <option value="Prospecção">Prospecção</option>
+                        <option value="Qualificação">Qualificação</option>
+                        <option value="Proposta Enviada">Proposta Enviada</option>
+                        <option value="Fechado">Fechado</option>
+                        <option value="Perdido">Perdido</option>
+                    </select>
+
+                    <label for="edit-lead-observation">Observação:</label>
+                    <textarea id="edit-lead-observation"></textarea>
+
+                    <label for="edit-lead-visit-date">Data da Visita:</label>
+                    <input type="date" id="edit-lead-visit-date">
+
+                    <p>Vendedor Responsável: <span id="details-seller-name"></span></p>
+                    <p>Data de Cadastro: <span id="details-timestamp"></span></p>
+
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                    <button type="button" id="back-to-list-btn" class="btn btn-secondary">Voltar para a Lista</button>
+                </form>
+                <p id="edit-lead-message" class="message-area"></p>
+            </div>
+        </section>
+    </main>
+
     <script src="script.js"></script>
 </body>
 </html>
