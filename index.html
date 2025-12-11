@@ -1,764 +1,708 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sales Funnel SaaS</title>
-    <link rel="stylesheet" href="styles.css" />
-    <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    />
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sales Funnel - Global</title>
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- Font Awesome (icons) -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <!-- LOGIN SCREEN -->
-    <section id="loginScreen" class="screen active">
-        <div class="login-container">
-            <div class="login-header">
-                <img
-                    src="https://encurtador.com.br/jiRd"
-                    alt="Logo"
-                    class="logo"
-                />
-                <h1>Sales Funnel</h1>
-                <p class="subtitle">Lead management SaaS</p>
-            </div>
+  <!-- LOGIN SCREEN -->
+  <section id="loginScreen" class="screen active">
+    <div class="login-container">
+      <div class="login-header">
+        <img
+          src="https://encurtador.com.br/jiRd"
+          alt="Global Logo"
+          class="logo"
+        />
+        <h1>Sales Funnel</h1>
+        <p class="subtitle">Lead management SaaS</p>
+      </div>
 
-            <div class="login-form">
-                <div class="form-group">
-                    <label for="loginEmail">
-                        <i class="fas fa-envelope"></i> Email
-                    </label>
-                    <input
-                        type="email"
-                        id="loginEmail"
-                        placeholder="you@email.com"
-                        autocomplete="username"
-                    />
-                </div>
-
-                <div class="form-group">
-                    <label for="loginPassword">
-                        <i class="fas fa-lock"></i> Password
-                    </label>
-                    <input
-                        type="password"
-                        id="loginPassword"
-                        placeholder="Your password"
-                        autocomplete="current-password"
-                    />
-                </div>
-
-                <button id="loginBtn" class="btn btn-primary full-width">
-                    <i class="fas fa-sign-in-alt"></i> Sign in
-                </button>
-
-                <button
-                    id="forgotPasswordBtn"
-                    class="btn btn-secondary full-width btn-margin-top"
-                >
-                    <i class="fas fa-key"></i> Forgot my password
-                </button>
-
-                <div
-                    id="loginMessage"
-                    class="message"
-                    style="display: none"
-                ></div>
-            </div>
+      <div class="login-form">
+        <div class="form-group">
+          <label for="loginEmail">
+            <i class="fas fa-envelope"></i> E-mail
+          </label>
+          <input
+            type="email"
+            id="loginEmail"
+            placeholder="you@email.com"
+            autocomplete="username"
+          />
         </div>
-    </section>
 
-    <!-- MAIN APP SCREEN -->
-    <section id="appScreen" class="screen">
-        <!-- HEADER -->
-        <header class="header">
-            <div class="header-left">
-                <img
-                    src="https://encurtador.com.br/jiRd"
-                    alt="Logo"
-                    class="header-logo"
-                />
-                <h2 class="header-title">Sales Funnel SaaS</h2>
-            </div>
-            <div class="header-right">
-                <div class="user-info">
-                    <span id="currentUserName" class="user-name"></span>
-                    <span id="currentUserRole" class="user-role-tag"></span>
-                </div>
-                <button id="logoutBtn" class="btn btn-secondary btn-sm">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </button>
-            </div>
-        </header>
-
-        <!-- APP LAYOUT -->
-        <div class="app-layout">
-            <!-- SIDEBAR -->
-            <aside class="sidebar">
-                <ul class="nav-menu">
-                    <li class="nav-item" data-visible-for="supervisor,seller">
-                        <a
-                            href="#"
-                            class="nav-link active"
-                            data-section="dashboardSection"
-                        >
-                            <i class="fas fa-chart-line"></i> Dashboard
-                        </a>
-                    </li>
-
-                    <li class="nav-item" data-visible-for="supervisor,seller">
-                        <a
-                            href="#"
-                            class="nav-link"
-                            data-section="leadListSection"
-                        >
-                            <i class="fas fa-users"></i> Leads
-                        </a>
-                    </li>
-
-                    <li class="nav-item" data-visible-for="supervisor,seller">
-                        <a
-                            href="#"
-                            class="nav-link"
-                            data-section="leadCreateSection"
-                        >
-                            <i class="fas fa-plus-circle"></i> New lead
-                        </a>
-                    </li>
-
-                    <li class="nav-item" data-visible-for="supervisor">
-                        <a
-                            href="#"
-                            class="nav-link"
-                            data-section="userAdminSection"
-                        >
-                            <i class="fas fa-user-shield"></i> Users (supervisor)
-                        </a>
-                    </li>
-                </ul>
-            </aside>
-
-            <!-- MAIN CONTENT -->
-            <main class="main-content">
-                <!-- DASHBOARD -->
-                <section
-                    id="dashboardSection"
-                    class="content-section active"
-                >
-                    <div class="section-header">
-                        <h2>
-                            <i class="fas fa-chart-line"></i> Dashboard
-                        </h2>
-                        <div class="filters-row">
-                            <div class="filter-group">
-                                <label for="dashYearSelect">Year</label>
-                                <select id="dashYearSelect"></select>
-                            </div>
-                            <div class="filter-group">
-                                <label for="dashMonthSelect">Month</label>
-                                <select id="dashMonthSelect"></select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-icon stat-icon-green">
-                                <i class="fas fa-users"></i>
-                            </div>
-                            <div class="stat-info">
-                                <h3 id="statTotalLeads">0</h3>
-                                <p>Leads in selected month</p>
-                            </div>
-                        </div>
-
-                        <div class="stat-card">
-                            <div class="stat-icon stat-icon-yellow">
-                                <i class="fas fa-calendar-alt"></i>
-                            </div>
-                            <div class="stat-info">
-                                <h3 id="statPrevMonthLeads">0</h3>
-                                <p>Leads in previous month</p>
-                            </div>
-                        </div>
-
-                        <div class="stat-card">
-                            <div class="stat-icon stat-icon-dark">
-                                <i class="fas fa-arrow-up"></i>
-                            </div>
-                            <div class="stat-info">
-                                <h3 id="statMonthDiff">0</h3>
-                                <p>Difference vs previous month</p>
-                            </div>
-                        </div>
-
-                        <div class="stat-card">
-                            <div class="stat-icon stat-icon-black">
-                                <i class="fas fa-percentage"></i>
-                            </div>
-                            <div class="stat-info">
-                                <h3 id="statConversionRate">0%</h3>
-                                <p>Conversion rate (won)</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="charts-grid">
-                        <div class="chart-card">
-                            <h3>
-                                <i class="fas fa-flag"></i> Leads by status
-                            </h3>
-                            <canvas id="statusChart"></canvas>
-                        </div>
-
-                        <div class="chart-card">
-                            <h3>
-                                <i class="fas fa-user-tie"></i> Leads by seller
-                            </h3>
-                            <canvas id="sellerChart"></canvas>
-                        </div>
-                    </div>
-
-                    <div class="table-card">
-                        <div class="table-card-header">
-                            <h3>
-                                <i class="fas fa-clock"></i> Latest leads
-                            </h3>
-                        </div>
-                        <div class="table-responsive">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Phone</th>
-                                        <th>City</th>
-                                        <th>Status</th>
-                                        <th>Visit date</th>
-                                        <th>Seller</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="latestLeadsTableBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- LEADS LIST -->
-                <section id="leadListSection" class="content-section">
-                    <div class="section-header">
-                        <h2>
-                            <i class="fas fa-users"></i> Leads list
-                        </h2>
-                        <div class="filters-row">
-                            <div class="filter-group">
-                                <label for="leadsYearSelect">Year</label>
-                                <select id="leadsYearSelect"></select>
-                            </div>
-                            <div class="filter-group">
-                                <label for="leadsMonthSelect">Month</label>
-                                <select id="leadsMonthSelect"></select>
-                            </div>
-                            <div class="filter-group">
-                                <label for="filterStatusSelect">Status</label>
-                                <select id="filterStatusSelect">
-                                    <option value="all">All</option>
-                                    <option value="new">New</option>
-                                    <option value="in_contact">In contact</option>
-                                    <option value="negotiation">Negotiation</option>
-                                    <option value="proposal_sent">Proposal sent</option>
-                                    <option value="won">Won</option>
-                                    <option value="lost">Lost</option>
-                                </select>
-                            </div>
-                            <div class="filter-group">
-                                <label for="filterCityInput">City</label>
-                                <input
-                                    type="text"
-                                    id="filterCityInput"
-                                    placeholder="Filter by city"
-                                />
-                            </div>
-                            <div class="filter-group">
-                                <label>Date range</label>
-                                <div class="date-range">
-                                    <input type="date" id="filterDateFrom" />
-                                    <span class="date-range-separator">to</span>
-                                    <input type="date" id="filterDateTo" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="table-card">
-                        <div class="table-card-header">
-                            <div class="table-card-header-left">
-                                <h3>
-                                    <i class="fas fa-list"></i> Leads
-                                </h3>
-                            </div>
-                            <div class="table-card-header-right">
-                                <button
-                                    id="exportLeadsBtn"
-                                    class="btn btn-secondary btn-sm"
-                                >
-                                    <i class="fas fa-file-download"></i> Export CSV
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="table-responsive">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Phone</th>
-                                        <th>Email</th>
-                                        <th>City</th>
-                                        <th>Product</th>
-                                        <th>Status</th>
-                                        <th>Visit date</th>
-                                        <th>Seller</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="leadListTableBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- LEAD CREATE -->
-                <section id="leadCreateSection" class="content-section">
-                    <div class="section-header">
-                        <h2>
-                            <i class="fas fa-plus-circle"></i> New lead
-                        </h2>
-                    </div>
-
-                    <div class="form-card">
-                        <form id="leadCreateForm">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="leadNameInput">
-                                        <i class="fas fa-user"></i> Full name
-                                        *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="leadNameInput"
-                                        required
-                                        placeholder="Client full name"
-                                    />
-                                </div>
-                                <div class="form-group">
-                                    <label for="leadPhoneInput">
-                                        <i class="fas fa-phone"></i> Phone *
-                                    </label>
-                                    <input
-                                        type="tel"
-                                        id="leadPhoneInput"
-                                        required
-                                        placeholder="(00) 00000-0000"
-                                    />
-                                </div>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="leadEmailInput">
-                                        <i class="fas fa-envelope"></i> Email
-                                        *
-                                    </label>
-                                    <input
-                                        type="email"
-                                        id="leadEmailInput"
-                                        required
-                                        placeholder="client@email.com"
-                                    />
-                                </div>
-                                <div class="form-group">
-                                    <label for="leadCityInput">
-                                        <i class="fas fa-city"></i> City *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="leadCityInput"
-                                        required
-                                        placeholder="City"
-                                    />
-                                </div>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="leadProductInput">
-                                        <i class="fas fa-tractor"></i> Product
-                                        of interest *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="leadProductInput"
-                                        required
-                                        placeholder="Product"
-                                    />
-                                </div>
-                                <div class="form-group">
-                                    <label for="leadStatusSelect">
-                                        <i class="fas fa-flag"></i> Status *
-                                    </label>
-                                    <select
-                                        id="leadStatusSelect"
-                                        required
-                                    >
-                                        <option value="">Select...</option>
-                                        <option value="new">New</option>
-                                        <option value="in_contact">
-                                            In contact
-                                        </option>
-                                        <option value="negotiation">
-                                            Negotiation
-                                        </option>
-                                        <option value="proposal_sent">
-                                            Proposal sent
-                                        </option>
-                                        <option value="won">Won</option>
-                                        <option value="lost">Lost</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="leadVisitDateInput">
-                                        <i class="fas fa-calendar-alt"></i>
-                                        Visit date *
-                                    </label>
-                                    <input
-                                        type="date"
-                                        id="leadVisitDateInput"
-                                        required
-                                    />
-                                </div>
-                                <div class="form-group">
-                                    <label for="leadNotesInput">
-                                        <i class="fas fa-sticky-note"></i>
-                                        Notes
-                                    </label>
-                                    <textarea
-                                        id="leadNotesInput"
-                                        rows="3"
-                                        placeholder="Notes about this lead"
-                                    ></textarea>
-                                </div>
-                            </div>
-
-                            <div class="form-actions">
-                                <button
-                                    type="reset"
-                                    class="btn btn-secondary"
-                                >
-                                    <i class="fas fa-eraser"></i> Clear
-                                </button>
-                                <button
-                                    type="submit"
-                                    class="btn btn-primary"
-                                >
-                                    <i class="fas fa-save"></i> Save lead
-                                </button>
-                            </div>
-
-                            <div
-                                id="leadCreateMessage"
-                                class="message"
-                                style="display: none"
-                            ></div>
-                        </form>
-                    </div>
-                </section>
-
-                <!-- LEAD DETAILS -->
-                <section id="leadDetailsSection" class="content-section">
-                    <div class="section-header">
-                        <h2>
-                            <i class="fas fa-id-card"></i> Lead details
-                        </h2>
-                        <button
-                            id="backToListBtn"
-                            class="btn btn-secondary btn-sm"
-                        >
-                            <i class="fas fa-arrow-left"></i> Back to list
-                        </button>
-                    </div>
-
-                    <div class="details-card">
-                        <div class="details-grid">
-                            <div class="detail-item">
-                                <span class="detail-label">Name</span>
-                                <span
-                                    class="detail-value"
-                                    id="detailName"
-                                ></span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Phone</span>
-                                <span
-                                    class="detail-value"
-                                    id="detailPhone"
-                                ></span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Email</span>
-                                <span
-                                    class="detail-value"
-                                    id="detailEmail"
-                                ></span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">City</span>
-                                <span
-                                    class="detail-value"
-                                    id="detailCity"
-                                ></span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Product</span>
-                                <span
-                                    class="detail-value"
-                                    id="detailProduct"
-                                ></span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Status</span>
-                                <span
-                                    class="detail-value badge"
-                                    id="detailStatus"
-                                ></span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Visit date</span>
-                                <span
-                                    class="detail-value"
-                                    id="detailVisitDate"
-                                ></span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">
-                                    Created at
-                                </span>
-                                <span
-                                    class="detail-value"
-                                    id="detailCreatedAt"
-                                ></span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">
-                                    Seller
-                                </span>
-                                <span
-                                    class="detail-value"
-                                    id="detailSeller"
-                                ></span>
-                            </div>
-                        </div>
-
-                        <div class="detail-notes-block">
-                            <span class="detail-label">Notes</span>
-                            <p
-                                class="detail-notes"
-                                id="detailNotes"
-                            ></p>
-                        </div>
-
-                        <div
-                            id="leadDetailsEditContainer"
-                            class="details-edit-container"
-                        >
-                            <h3>
-                                <i class="fas fa-edit"></i> Update lead
-                            </h3>
-                            <form id="leadDetailsForm">
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="detailStatusSelect">
-                                            Status
-                                        </label>
-                                        <select
-                                            id="detailStatusSelect"
-                                        >
-                                            <option value="new">
-                                                New
-                                            </option>
-                                            <option value="in_contact">
-                                                In contact
-                                            </option>
-                                            <option value="negotiation">
-                                                Negotiation
-                                            </option>
-                                            <option value="proposal_sent">
-                                                Proposal sent
-                                            </option>
-                                            <option value="won">
-                                                Won
-                                            </option>
-                                            <option value="lost">
-                                                Lost
-                                            </option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="detailNotesInput">
-                                            Notes
-                                        </label>
-                                        <textarea
-                                            id="detailNotesInput"
-                                            rows="3"
-                                        ></textarea>
-                                    </div>
-                                </div>
-
-                                <div class="form-actions">
-                                    <button
-                                        type="submit"
-                                        class="btn btn-primary"
-                                    >
-                                        <i class="fas fa-save"></i> Save
-                                        changes
-                                    </button>
-                                </div>
-
-                                <div
-                                    id="leadDetailsMessage"
-                                    class="message"
-                                    style="display: none"
-                                ></div>
-                            </form>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- SUPERVISOR USER ADMIN -->
-                <section id="userAdminSection" class="content-section">
-                    <div class="section-header">
-                        <h2>
-                            <i class="fas fa-user-shield"></i> Users
-                            (supervisor)
-                        </h2>
-                    </div>
-
-                    <div class="form-card">
-                        <h3>
-                            <i class="fas fa-user-plus"></i> Create seller
-                            account
-                        </h3>
-                        <p class="helper-text">
-                            This action creates a Firebase Authentication
-                            account and a profile in the Realtime Database.
-                        </p>
-
-                        <form id="userCreateForm">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="sellerNameInput">
-                                        <i class="fas fa-user"></i> Seller
-                                        name *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="sellerNameInput"
-                                        required
-                                        placeholder="Full name"
-                                    />
-                                </div>
-                                <div class="form-group">
-                                    <label for="sellerEmailInput">
-                                        <i class="fas fa-envelope"></i>
-                                        Seller email *
-                                    </label>
-                                    <input
-                                        type="email"
-                                        id="sellerEmailInput"
-                                        required
-                                        placeholder="seller@email.com"
-                                    />
-                                </div>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="sellerPasswordInput">
-                                        <i class="fas fa-lock"></i> Password
-                                        *
-                                    </label>
-                                    <input
-                                        type="password"
-                                        id="sellerPasswordInput"
-                                        required
-                                        minlength="6"
-                                        placeholder="Minimum 6 characters"
-                                    />
-                                </div>
-                                <div class="form-group">
-                                    <label for="sellerPasswordConfirmInput">
-                                        <i class="fas fa-lock"></i> Confirm
-                                        password *
-                                    </label>
-                                    <input
-                                        type="password"
-                                        id="sellerPasswordConfirmInput"
-                                        required
-                                        minlength="6"
-                                        placeholder="Repeat password"
-                                    />
-                                </div>
-                            </div>
-
-                            <div class="form-actions">
-                                <button
-                                    type="submit"
-                                    class="btn btn-primary"
-                                >
-                                    <i class="fas fa-user-plus"></i> Create
-                                    seller
-                                </button>
-                            </div>
-
-                            <div
-                                id="userCreateMessage"
-                                class="message"
-                                style="display: none"
-                            ></div>
-                        </form>
-                    </div>
-
-                    <div class="table-card">
-                        <div class="table-card-header">
-                            <h3>
-                                <i class="fas fa-users"></i> Sellers list
-                            </h3>
-                        </div>
-
-                        <div class="table-responsive">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Email</th>
-                                        <th>Status</th>
-                                        <th>Created at</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="userListTableBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </section>
-            </main>
+        <div class="form-group">
+          <label for="loginPassword">
+            <i class="fas fa-lock"></i> Password
+          </label>
+          <input
+            type="password"
+            id="loginPassword"
+            placeholder="Your password"
+            autocomplete="current-password"
+          />
         </div>
-    </section>
 
-    <script type="module" src="script.js"></script>
+        <button id="loginBtn" class="btn btn-primary">
+          <i class="fas fa-sign-in-alt"></i> Login
+        </button>
+
+        <button id="forgotPasswordBtn" class="btn btn-link">
+          Forgot my password
+        </button>
+
+        <div id="loginError" class="error-message" style="display: none;"></div>
+
+        <div class="login-footer">
+          <p class="credential-hint">
+            <i class="fas fa-info-circle"></i>
+            Default supervisor account (example):<br />
+            Email: supervisor@global.com.br<br />
+            Password: global@2025
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- APP SCREEN -->
+  <section id="appScreen" class="screen">
+    <!-- HEADER -->
+    <header class="header">
+      <div class="header-left">
+        <img
+          src="https://encurtador.com.br/jiRd"
+          alt="Global Logo"
+          class="header-logo"
+        />
+        <h2 class="header-title">Global - Sales Funnel</h2>
+      </div>
+      <div class="header-right">
+        <span id="currentUserName" class="user-name"></span>
+        <span id="currentUserRole" class="user-role"></span>
+        <button id="logoutBtn" class="btn btn-secondary btn-sm">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </button>
+      </div>
+    </header>
+
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+      <ul class="nav-menu">
+        <li class="nav-item nav-dashboard">
+          <a href="#" class="nav-link" data-section="dashboardSection">
+            <i class="fas fa-chart-line"></i> Dashboard
+          </a>
+        </li>
+
+        <li class="nav-item nav-lead-form">
+          <a href="#" class="nav-link" data-section="leadFormSection">
+            <i class="fas fa-plus-circle"></i> New Lead
+          </a>
+        </li>
+
+        <li class="nav-item nav-lead-list">
+          <a href="#" class="nav-link" data-section="leadsListSection">
+            <i class="fas fa-users"></i> Leads List
+          </a>
+        </li>
+
+        <li class="nav-item nav-user-admin">
+          <a href="#" class="nav-link" data-section="userAdminSection">
+            <i class="fas fa-user-shield"></i> Users (Supervisor)
+          </a>
+        </li>
+
+        <li class="nav-item nav-profile">
+          <a href="#" class="nav-link" data-section="profileSection">
+            <i class="fas fa-user-cog"></i> My Profile
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+      <!-- DASHBOARD -->
+      <section id="dashboardSection" class="content-section active">
+        <div class="section-header">
+          <h2>
+            <i class="fas fa-chart-line"></i>
+            Dashboard
+          </h2>
+          <div class="action-buttons">
+            <div class="date-filter">
+              <label for="dashboardYearSelect" class="filter-label">
+                Year
+              </label>
+              <select id="dashboardYearSelect"></select>
+
+              <label for="dashboardMonthSelect" class="filter-label">
+                Month
+              </label>
+              <select id="dashboardMonthSelect"></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon stat-green">
+              <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-info">
+              <h3 id="cardLeadsMonthTotal">0</h3>
+              <p>Leads in selected month</p>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon stat-yellow">
+              <i class="fas fa-handshake"></i>
+            </div>
+            <div class="stat-info">
+              <h3 id="cardLeadsWon">0</h3>
+              <p>Won deals</p>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon stat-dark">
+              <i class="fas fa-percentage"></i>
+            </div>
+            <div class="stat-info">
+              <h3 id="cardConversion">0%</h3>
+              <p>Conversion rate</p>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon stat-black">
+              <i class="fas fa-chart-area"></i>
+            </div>
+            <div class="stat-info">
+              <h3 id="cardMonthComparison">0</h3>
+              <p>Vs. previous month (leads)</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="chart-container">
+            <h3>
+              <i class="fas fa-flag"></i>
+              Leads by status
+            </h3>
+            <canvas id="statusChart"></canvas>
+          </div>
+
+          <div class="chart-container">
+            <h3>
+              <i class="fas fa-user-tie"></i>
+              Leads by seller
+            </h3>
+            <canvas id="sellerChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <h3>
+            <i class="fas fa-calendar-alt"></i>
+            Last 6 months comparison (leads)
+          </h3>
+          <canvas id="monthlyChart"></canvas>
+        </div>
+
+        <div class="table-container">
+          <h3>
+            <i class="fas fa-clock"></i>
+            Latest leads in selected month
+          </h3>
+          <div class="table-responsive">
+            <table id="dashboardLeadsTable">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>City</th>
+                  <th>Product</th>
+                  <th>Status</th>
+                  <th>Visit date</th>
+                  <th>Seller</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- LEAD FORM -->
+      <section id="leadFormSection" class="content-section">
+        <div class="section-header">
+          <h2>
+            <i class="fas fa-plus-circle"></i>
+            Lead registration
+          </h2>
+        </div>
+
+        <div class="form-container">
+          <form id="leadForm">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="leadNameInput">
+                  <i class="fas fa-user"></i> Full name
+                </label>
+                <input
+                  type="text"
+                  id="leadNameInput"
+                  placeholder="Lead full name"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="leadPhoneInput">
+                  <i class="fas fa-phone"></i> Phone
+                </label>
+                <input
+                  type="tel"
+                  id="leadPhoneInput"
+                  placeholder="(11) 99999-9999"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="leadEmailInput">
+                  <i class="fas fa-envelope"></i> E-mail
+                </label>
+                <input
+                  type="email"
+                  id="leadEmailInput"
+                  placeholder="lead@email.com"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="leadCityInput">
+                  <i class="fas fa-city"></i> City
+                </label>
+                <input
+                  type="text"
+                  id="leadCityInput"
+                  placeholder="City"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="leadProductInput">
+                  <i class="fas fa-tractor"></i> Product of interest
+                </label>
+                <input
+                  type="text"
+                  id="leadProductInput"
+                  placeholder="Product / solution"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="leadStatusSelect">
+                  <i class="fas fa-flag"></i> Lead status
+                </label>
+                <select id="leadStatusSelect" required>
+                  <option value="">Select...</option>
+                  <option value="new">New</option>
+                  <option value="contacted">Contacted</option>
+                  <option value="proposal">Proposal sent</option>
+                  <option value="won">Won</option>
+                  <option value="lost">Lost</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group full-width">
+                <label for="leadVisitDateInput">
+                  <i class="fas fa-calendar-alt"></i> Visit date
+                </label>
+                <input type="date" id="leadVisitDateInput" required />
+                <small class="form-hint">
+                  If empty, the system will use today's date automatically.
+                </small>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group full-width">
+                <label for="leadNotesInput">
+                  <i class="fas fa-sticky-note"></i> Notes
+                </label>
+                <textarea
+                  id="leadNotesInput"
+                  rows="3"
+                  placeholder="Context, objections, next steps..."
+                ></textarea>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="reset" class="btn btn-secondary">
+                <i class="fas fa-eraser"></i> Clear
+              </button>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Save lead
+              </button>
+            </div>
+
+            <div
+              id="leadFormMessage"
+              class="message"
+              style="display: none;"
+            ></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- LEADS LIST -->
+      <section id="leadsListSection" class="content-section">
+        <div class="section-header">
+          <h2>
+            <i class="fas fa-users"></i>
+            Leads list
+          </h2>
+
+          <div class="action-buttons">
+            <div class="date-filter">
+              <label class="filter-label" for="leadsYearSelect">Year</label>
+              <select id="leadsYearSelect"></select>
+
+              <label class="filter-label" for="leadsMonthSelect">Month</label>
+              <select id="leadsMonthSelect"></select>
+            </div>
+
+            <div class="date-filter">
+              <label class="filter-label" for="leadsStatusFilter">Status</label>
+              <select id="leadsStatusFilter">
+                <option value="all">All</option>
+                <option value="new">New</option>
+                <option value="contacted">Contacted</option>
+                <option value="proposal">Proposal sent</option>
+                <option value="won">Won</option>
+                <option value="lost">Lost</option>
+              </select>
+            </div>
+
+            <div class="date-filter">
+              <label class="filter-label" for="leadsCityFilter">City</label>
+              <input
+                type="text"
+                id="leadsCityFilter"
+                placeholder="City filter"
+              />
+            </div>
+
+            <div class="date-filter">
+              <label class="filter-label" for="leadsStartDate">From</label>
+              <input type="date" id="leadsStartDate" />
+
+              <label class="filter-label" for="leadsEndDate">To</label>
+              <input type="date" id="leadsEndDate" />
+            </div>
+
+            <button id="exportLeadsBtn" class="btn btn-secondary">
+              <i class="fas fa-download"></i> Export CSV
+            </button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <div class="table-responsive">
+            <table id="leadsTable">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>E-mail</th>
+                  <th>City</th>
+                  <th>Product</th>
+                  <th>Status</th>
+                  <th>Visit date</th>
+                  <th>Seller</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- LEAD DETAILS -->
+      <section id="leadDetailsSection" class="content-section">
+        <div class="section-header">
+          <h2>
+            <i class="fas fa-info-circle"></i>
+            Lead details
+          </h2>
+          <button id="backToListBtn" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Back to list
+          </button>
+        </div>
+
+        <div class="form-container">
+          <div class="lead-details-grid">
+            <div class="lead-detail-block">
+              <h3><i class="fas fa-user"></i> Lead</h3>
+              <p><strong>Name:</strong> <span id="detailName"></span></p>
+              <p><strong>Phone:</strong> <span id="detailPhone"></span></p>
+              <p><strong>E-mail:</strong> <span id="detailEmail"></span></p>
+              <p><strong>City:</strong> <span id="detailCity"></span></p>
+            </div>
+
+            <div class="lead-detail-block">
+              <h3><i class="fas fa-tractor"></i> Funnel</h3>
+              <p>
+                <strong>Product of interest:</strong>
+                <span id="detailProduct"></span>
+              </p>
+              <p><strong>Status:</strong> <span id="detailStatus"></span></p>
+              <p>
+                <strong>Visit date:</strong>
+                <span id="detailVisitDate"></span>
+              </p>
+              <p>
+                <strong>Created at:</strong>
+                <span id="detailCreatedAt"></span>
+              </p>
+            </div>
+
+            <div class="lead-detail-block">
+              <h3><i class="fas fa-user-tie"></i> Seller</h3>
+              <p>
+                <strong>Responsible seller:</strong>
+                <span id="detailSeller"></span>
+              </p>
+            </div>
+
+            <div class="lead-detail-block full-width">
+              <h3><i class="fas fa-sticky-note"></i> Notes</h3>
+              <p id="detailNotes"></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- USER ADMIN (SUPERVISOR) -->
+      <section id="userAdminSection" class="content-section">
+        <div class="section-header">
+          <h2>
+            <i class="fas fa-user-shield"></i>
+            Supervisor panel - Sellers
+          </h2>
+        </div>
+
+        <div class="form-container">
+          <h3>
+            <i class="fas fa-user-plus"></i>
+            Create seller account
+          </h3>
+          <form id="createSellerForm">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="sellerNameInput">
+                  <i class="fas fa-user"></i> Seller name
+                </label>
+                <input
+                  type="text"
+                  id="sellerNameInput"
+                  placeholder="Full name"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="sellerEmailInput">
+                  <i class="fas fa-envelope"></i> Seller e-mail
+                </label>
+                <input
+                  type="email"
+                  id="sellerEmailInput"
+                  placeholder="seller@email.com"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="sellerPasswordInput">
+                  <i class="fas fa-lock"></i> Password
+                </label>
+                <input
+                  type="password"
+                  id="sellerPasswordInput"
+                  placeholder="Minimum 6 characters"
+                  required
+                  minlength="6"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="sellerPasswordConfirmInput">
+                  <i class="fas fa-lock"></i> Confirm password
+                </label>
+                <input
+                  type="password"
+                  id="sellerPasswordConfirmInput"
+                  placeholder="Repeat password"
+                  required
+                  minlength="6"
+                />
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-user-plus"></i> Create seller
+              </button>
+            </div>
+
+            <div
+              id="sellerFormMessage"
+              class="message"
+              style="display: none;"
+            ></div>
+          </form>
+        </div>
+
+        <div class="table-container mt-4">
+          <h3>
+            <i class="fas fa-list"></i>
+            Sellers list
+          </h3>
+          <div class="table-responsive">
+            <table id="sellersTable">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>E-mail</th>
+                  <th>Status</th>
+                  <th>Created at</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- PROFILE -->
+      <section id="profileSection" class="content-section">
+        <div class="section-header">
+          <h2>
+            <i class="fas fa-user-cog"></i>
+            My profile
+          </h2>
+        </div>
+
+        <div class="profile-container">
+          <div class="profile-info">
+            <div class="profile-avatar">
+              <i class="fas fa-user-circle"></i>
+            </div>
+            <div class="profile-details">
+              <h3 id="profileName"></h3>
+              <p id="profileEmail"></p>
+              <p id="profileRole"></p>
+              <p id="profileSince"></p>
+            </div>
+          </div>
+
+          <div class="form-container">
+            <h3>
+              <i class="fas fa-key"></i>
+              Change password
+            </h3>
+            <form id="changePasswordForm">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="currentPasswordInput">
+                    <i class="fas fa-lock"></i> Current password
+                  </label>
+                  <input
+                    type="password"
+                    id="currentPasswordInput"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="newPasswordInput">
+                    <i class="fas fa-lock"></i> New password
+                  </label>
+                  <input
+                    type="password"
+                    id="newPasswordInput"
+                    required
+                    minlength="6"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="newPasswordConfirmInput">
+                    <i class="fas fa-lock"></i> Confirm new password
+                  </label>
+                  <input
+                    type="password"
+                    id="newPasswordConfirmInput"
+                    required
+                    minlength="6"
+                  />
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-save"></i> Change password
+                </button>
+              </div>
+
+              <div
+                id="passwordMessage"
+                class="message"
+                style="display: none;"
+              ></div>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+  </section>
+
+  <!-- MAIN SCRIPT -->
+  <script type="module" src="script.js"></script>
 </body>
 </html>
