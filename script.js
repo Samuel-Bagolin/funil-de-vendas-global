@@ -20,6 +20,11 @@ let currentUser = null;
 let userRole = null;
 let chartInstances = {};
 
+// Flags de inicialização de painéis
+let directorDashboardInitialized = false;
+let supervisorPanelInitialized = false;
+let sellerPanelInitialized = false;
+
 // DOM Elements
 const loginScreen = document.getElementById('loginScreen');
 const mainSystem = document.getElementById('mainSystem');
@@ -40,6 +45,12 @@ const conversionRateElement = document.getElementById('conversionRate');
 const visitsThisMonthElement = document.getElementById('visitsThisMonth');
 const yearFilter = document.getElementById('yearFilter');
 const monthFilter = document.getElementById('monthFilter');
+
+// Configurar listeners de filtro do diretor (apenas uma vez)
+if (yearFilter && monthFilter) {
+    yearFilter.addEventListener('change', loadDirectorDashboard);
+    monthFilter.addEventListener('change', loadDirectorDashboard);
+}
 
 // Elementos Supervisor
 const addSellerBtn = document.getElementById('addSellerBtn');
@@ -130,24 +141,42 @@ function createSidebarMenu(role) {
     });
 }
 
-// Mostrar painel específico
+// Mostrar painel específico (versão idempotente)
 function showPanel(panelId) {
     // Esconder todos os painéis
     document.querySelectorAll('.dashboard-section').forEach(panel => {
         panel.classList.remove('active');
     });
-    
+
     // Mostrar painel selecionado
     const panel = document.getElementById(panelId);
-    if (panel) {
-        panel.classList.add('active');
-        
-        // Carregar dados específicos do painel
-        if (panelId === 'directorDashboard') {
-            loadDirectorDashboard();
-        } else if (panelId === 'supervisorPanel') {
+    if (!panel) {
+        return;
+    }
+
+    panel.classList.add('active');
+
+    // Carregar dados específicos do painel, controlando inicialização
+    if (panelId === 'directorDashboard') {
+        if (!directorDashboardInitialized) {
+            directorDashboardInitialized = true;
+        }
+        loadDirectorDashboard();
+    } else if (panelId === 'supervisorPanel') {
+        if (!supervisorPanelInitialized) {
+            supervisorPanelInitialized = true;
             loadSupervisorPanel();
-        } else if (panelId === 'sellerPanel') {
+        } else {
+            // Recarrega apenas dados, sem recriar listeners
+            loadSellersList();
+            loadSupervisorLeads();
+        }
+    } else if (panelId === 'sellerPanel') {
+        if (!sellerPanelInitialized) {
+            sellerPanelInitialized = true;
+            loadSellerPanel();
+        } else {
+            // Recarrega apenas lista de leads do vendedor
             loadSellerLeads();
         }
     }
@@ -247,10 +276,6 @@ async function loadDirectorDashboard() {
     await loadDirectorStats();
     await loadDirectorLeads();
     await loadSellersForDirector();
-    
-    // Configurar listeners para filtros
-    yearFilter.addEventListener('change', loadDirectorDashboard);
-    monthFilter.addEventListener('change', loadDirectorDashboard);
 }
 
 async function loadYearFilter() {
@@ -545,50 +570,56 @@ async function loadCharts(year, month) {
 
 function loadSupervisorPanel() {
     // Mostrar/ocultar formulário de novo vendedor
-    addSellerBtn.addEventListener('click', () => {
-        newSellerForm.style.display = 'block';
-        addSellerBtn.style.display = 'none';
-    });
+    if (addSellerBtn) {
+        addSellerBtn.addEventListener('click', () => {
+            newSellerForm.style.display = 'block';
+            addSellerBtn.style.display = 'none';
+        });
+    }
     
-    cancelSellerBtn.addEventListener('click', () => {
-        newSellerForm.style.display = 'none';
-        addSellerBtn.style.display = 'flex';
-        sellerForm.reset();
-    });
-    
-    // Formulário de cadastro de vendedor
-    sellerForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const name = document.getElementById('sellerName').value;
-        const email = document.getElementById('sellerEmail').value;
-        const password = document.getElementById('sellerPassword').value;
-        const confirmPassword = document.getElementById('sellerConfirmPassword').value;
-        
-        if (password !== confirmPassword) {
-            showMessage('As senhas não coincidem!', 'error');
-            return;
-        }
-        
-        try {
-            // Criar usuário no Firebase Authentication
-            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-            
-            // Aqui você poderia salvar informações adicionais no Realtime Database
-            const userId = userCredential.user.uid;
-            
-            showMessage('Vendedor cadastrado com sucesso!', 'success');
-            sellerForm.reset();
+    if (cancelSellerBtn) {
+        cancelSellerBtn.addEventListener('click', () => {
             newSellerForm.style.display = 'none';
             addSellerBtn.style.display = 'flex';
+            sellerForm.reset();
+        });
+    }
+    
+    // Formulário de cadastro de vendedor
+    if (sellerForm) {
+        sellerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
             
-            // Recarregar lista de vendedores
-            loadSellersList();
+            const name = document.getElementById('sellerName').value;
+            const email = document.getElementById('sellerEmail').value;
+            const password = document.getElementById('sellerPassword').value;
+            const confirmPassword = document.getElementById('sellerConfirmPassword').value;
             
-        } catch (error) {
-            showMessage('Erro ao cadastrar vendedor: ' + error.message, 'error');
-        }
-    });
+            if (password !== confirmPassword) {
+                showMessage('As senhas não coincidem!', 'error');
+                return;
+            }
+            
+            try {
+                // Criar usuário no Firebase Authentication
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                
+                // Aqui você poderia salvar informações adicionais no Realtime Database
+                const userId = userCredential.user.uid;
+                
+                showMessage('Vendedor cadastrado com sucesso!', 'success');
+                sellerForm.reset();
+                newSellerForm.style.display = 'none';
+                addSellerBtn.style.display = 'flex';
+                
+                // Recarregar lista de vendedores
+                loadSellersList();
+                
+            } catch (error) {
+                showMessage('Erro ao cadastrar vendedor: ' + error.message, 'error');
+            }
+        });
+    }
     
     // Carregar lista de vendedores
     loadSellersList();
@@ -711,72 +742,80 @@ function loadSellerPanel() {
     document.getElementById('leadVisitDate').value = today;
     
     // Mostrar/ocultar formulário de novo lead
-    addLeadBtn.addEventListener('click', () => {
-        newLeadForm.style.display = 'block';
-        addLeadBtn.style.display = 'none';
-    });
+    if (addLeadBtn) {
+        addLeadBtn.addEventListener('click', () => {
+            newLeadForm.style.display = 'block';
+            addLeadBtn.style.display = 'none';
+        });
+    }
     
-    cancelLeadBtn.addEventListener('click', () => {
-        newLeadForm.style.display = 'none';
-        addLeadBtn.style.display = 'flex';
-        leadForm.reset();
-        document.getElementById('leadVisitDate').value = today;
-    });
-    
-    // Formulário de lead
-    leadForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        if (!currentUser) return;
-        
-        const leadData = {
-            name: document.getElementById('leadName').value,
-            phone: document.getElementById('leadPhone').value,
-            email: document.getElementById('leadEmail').value,
-            city: document.getElementById('leadCity').value,
-            product: document.getElementById('leadProduct').value,
-            status: document.getElementById('leadStatus').value,
-            visitDate: document.getElementById('leadVisitDate').value,
-            notes: document.getElementById('leadNotes').value,
-            sellerEmail: currentUser.email,
-            sellerName: currentUser.displayName || currentUser.email.split('@')[0],
-            timestamp: new Date().toISOString()
-        };
-        
-        try {
-            const { year, month } = getCurrentYearMonth();
-            const newLeadRef = database.ref(`leads/${year}/${month}`).push();
-            await newLeadRef.set({
-                ...leadData,
-                year,
-                month
-            });
-            
-            showMessage('Lead cadastrado com sucesso!', 'success');
-            leadForm.reset();
-            document.getElementById('leadVisitDate').value = today;
+    if (cancelLeadBtn) {
+        cancelLeadBtn.addEventListener('click', () => {
             newLeadForm.style.display = 'none';
             addLeadBtn.style.display = 'flex';
+            leadForm.reset();
+            document.getElementById('leadVisitDate').value = today;
+        });
+    }
+    
+    // Formulário de lead
+    if (leadForm) {
+        leadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
             
-            // Recarregar lista de leads
+            if (!currentUser) return;
+            
+            const leadData = {
+                name: document.getElementById('leadName').value,
+                phone: document.getElementById('leadPhone').value,
+                email: document.getElementById('leadEmail').value,
+                city: document.getElementById('leadCity').value,
+                product: document.getElementById('leadProduct').value,
+                status: document.getElementById('leadStatus').value,
+                visitDate: document.getElementById('leadVisitDate').value,
+                notes: document.getElementById('leadNotes').value,
+                sellerEmail: currentUser.email,
+                sellerName: currentUser.displayName || currentUser.email.split('@')[0],
+                timestamp: new Date().toISOString()
+            };
+            
+            try {
+                const { year, month } = getCurrentYearMonth();
+                const newLeadRef = database.ref(`leads/${year}/${month}`).push();
+                await newLeadRef.set({
+                    ...leadData,
+                    year,
+                    month
+                });
+                
+                showMessage('Lead cadastrado com sucesso!', 'success');
+                leadForm.reset();
+                document.getElementById('leadVisitDate').value = today;
+                newLeadForm.style.display = 'none';
+                addLeadBtn.style.display = 'flex';
+                
+                // Recarregar lista de leads
+                loadSellerLeads();
+                
+            } catch (error) {
+                showMessage('Erro ao cadastrar lead: ' + error.message, 'error');
+            }
+        });
+    }
+    
+    // Configurar filtros (apenas uma vez)
+    if (filterStatus && filterCity && filterDate && clearFilters) {
+        filterStatus.addEventListener('change', loadSellerLeads);
+        filterCity.addEventListener('input', loadSellerLeads);
+        filterDate.addEventListener('change', loadSellerLeads);
+        
+        clearFilters.addEventListener('click', () => {
+            filterStatus.value = 'all';
+            filterCity.value = '';
+            filterDate.value = '';
             loadSellerLeads();
-            
-        } catch (error) {
-            showMessage('Erro ao cadastrar lead: ' + error.message, 'error');
-        }
-    });
-    
-    // Configurar filtros
-    filterStatus.addEventListener('change', loadSellerLeads);
-    filterCity.addEventListener('input', loadSellerLeads);
-    filterDate.addEventListener('change', loadSellerLeads);
-    
-    clearFilters.addEventListener('click', () => {
-        filterStatus.value = 'all';
-        filterCity.value = '';
-        filterDate.value = '';
-        loadSellerLeads();
-    });
+        });
+    }
     
     // Carregar leads iniciais
     loadSellerLeads();
@@ -789,9 +828,9 @@ async function loadSellerLeads() {
         const tbody = sellerLeadsTable.querySelector('tbody');
         tbody.innerHTML = '';
         
-        const statusFilter = filterStatus.value;
-        const cityFilter = filterCity.value.toLowerCase();
-        const dateFilter = filterDate.value;
+        const statusFilter = filterStatus ? filterStatus.value : 'all';
+        const cityFilter = filterCity ? filterCity.value.toLowerCase() : '';
+        const dateFilter = filterDate ? filterDate.value : '';
         
         const snapshot = await database.ref('leads').once('value');
         const leads = [];
@@ -992,15 +1031,33 @@ async function deleteLead(leadId, year, month) {
 }
 
 // Fechar modal
-closeModal.addEventListener('click', () => {
-    editModal.classList.remove('active');
-});
-
-editModal.addEventListener('click', (e) => {
-    if (e.target === editModal) {
+if (closeModal) {
+    closeModal.addEventListener('click', () => {
         editModal.classList.remove('active');
-    }
-});
+    });
+}
+
+if (editModal) {
+    editModal.addEventListener('click', (e) => {
+        if (e.target === editModal) {
+            editModal.classList.remove('active');
+        }
+    });
+}
+
+// ========== FUNÇÕES PLACEHOLDER PARA EVITAR ERROS ==========
+
+// Placeholder para edição de vendedor (evita erro caso o botão seja clicado)
+function editSeller(email) {
+    console.warn('Edit seller was triggered for:', email);
+    alert('Edição de vendedor ainda não foi implementada nesta versão.');
+}
+
+// Placeholder para ativar/desativar vendedor (evita erro e mantém app estável)
+function toggleSellerStatus(email, isActive) {
+    console.warn('Toggle seller status was triggered for:', email, 'current active:', isActive);
+    alert('Ativação/desativação de vendedor ainda não foi implementada nesta versão.');
+}
 
 // Observar estado de autenticação
 auth.onAuthStateChanged((user) => {
