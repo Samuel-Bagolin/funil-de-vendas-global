@@ -55,7 +55,7 @@
         <header class="header">
             <div class="header-left">
                 <img src="https://encurtador.com.br/jiRd" alt="Logo Global" class="header-logo">
-                <h2 class="header-title">Funil de Vendas</h2>
+                <h2 class="header-title">Global - Funil de Vendas</h2>
             </div>
             <div class="header-right">
                 <span id="userName" class="user-name"></span>
@@ -69,29 +69,29 @@
         <!-- Menu Lateral -->
         <nav class="sidebar" id="sidebar">
             <ul class="nav-menu">
-                <li class="nav-item">
-                    <a href="#" class="nav-link active" data-section="dashboard">
+                <li class="nav-item dashboard-item" style="display: none;">
+                    <a href="#" class="nav-link" data-section="dashboard">
                         <i class="fas fa-chart-line"></i> Dashboard
                     </a>
                 </li>
-                <li class="nav-item">
+                <li class="nav-item leads-item" style="display: none;">
                     <a href="#" class="nav-link" data-section="leads">
                         <i class="fas fa-users"></i> Leads
                     </a>
                 </li>
-                <li class="nav-item">
+                <li class="nav-item newlead-item" style="display: none;">
                     <a href="#" class="nav-link" data-section="newLead">
                         <i class="fas fa-plus-circle"></i> Novo Lead
                     </a>
                 </li>
-                <li class="nav-item admin-only" style="display: none;">
+                <li class="nav-item admin-item" style="display: none;">
                     <a href="#" class="nav-link" data-section="admin">
-                        <i class="fas fa-user-shield"></i> Administração
+                        <i class="fas fa-user-shield"></i> Criar Vendedor
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="#" class="nav-link" data-section="profile">
-                        <i class="fas fa-user-cog"></i> Perfil
+                        <i class="fas fa-user-cog"></i> Meu Perfil
                     </a>
                 </li>
             </ul>
@@ -100,7 +100,7 @@
         <!-- Conteúdo Principal -->
         <main class="main-content">
             <!-- Dashboard -->
-            <section id="dashboard" class="content-section active">
+            <section id="dashboard" class="content-section">
                 <div class="section-header">
                     <h2><i class="fas fa-chart-line"></i> Dashboard</h2>
                     <div class="date-filter">
@@ -241,24 +241,24 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="leadName"><i class="fas fa-user"></i> Nome Completo *</label>
-                                <input type="text" id="leadName" required>
+                                <input type="text" id="leadName" required placeholder="Digite o nome completo">
                             </div>
                             
                             <div class="form-group">
                                 <label for="leadPhone"><i class="fas fa-phone"></i> Telefone *</label>
-                                <input type="tel" id="leadPhone" required>
+                                <input type="tel" id="leadPhone" required placeholder="(11) 99999-9999">
                             </div>
                         </div>
                         
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="leadEmail"><i class="fas fa-envelope"></i> E-mail *</label>
-                                <input type="email" id="leadEmail" required>
+                                <input type="email" id="leadEmail" required placeholder="exemplo@email.com">
                             </div>
                             
                             <div class="form-group">
                                 <label for="leadAddress"><i class="fas fa-map-marker-alt"></i> Endereço *</label>
-                                <input type="text" id="leadAddress" required>
+                                <input type="text" id="leadAddress" required placeholder="Rua, número, bairro">
                             </div>
                         </div>
                         
@@ -287,9 +287,10 @@
                         </div>
                         
                         <div class="form-row">
-                            <div class="form-group">
+                            <div class="form-group full-width">
                                 <label for="leadVisitDate"><i class="fas fa-calendar-alt"></i> Data da Visita *</label>
                                 <input type="date" id="leadVisitDate" required>
+                                <small class="form-hint">Selecione uma data futura</small>
                             </div>
                         </div>
                         
@@ -302,7 +303,7 @@
                             </button>
                         </div>
                         
-                        <div id="leadMessage" class="success-message" style="display: none;"></div>
+                        <div id="leadMessage" class="message" style="display: none;"></div>
                     </form>
                 </div>
             </section>
@@ -318,24 +319,24 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="adminName"><i class="fas fa-user"></i> Nome do Vendedor *</label>
-                                <input type="text" id="adminName" required>
+                                <input type="text" id="adminName" required placeholder="Nome completo do vendedor">
                             </div>
                             
                             <div class="form-group">
                                 <label for="adminEmail"><i class="fas fa-envelope"></i> E-mail *</label>
-                                <input type="email" id="adminEmail" required>
+                                <input type="email" id="adminEmail" required placeholder="vendedor@email.com">
                             </div>
                         </div>
                         
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="adminPassword"><i class="fas fa-lock"></i> Senha *</label>
-                                <input type="password" id="adminPassword" required minlength="6">
+                                <input type="password" id="adminPassword" required minlength="6" placeholder="Mínimo 6 caracteres">
                             </div>
                             
                             <div class="form-group">
                                 <label for="adminConfirmPassword"><i class="fas fa-lock"></i> Confirmar Senha *</label>
-                                <input type="password" id="adminConfirmPassword" required minlength="6">
+                                <input type="password" id="adminConfirmPassword" required minlength="6" placeholder="Digite a senha novamente">
                             </div>
                         </div>
                         
@@ -345,7 +346,7 @@
                             </button>
                         </div>
                         
-                        <div id="adminMessage" class="success-message" style="display: none;"></div>
+                        <div id="adminMessage" class="message" style="display: none;"></div>
                     </form>
                     
                     <div class="table-container mt-4">
@@ -416,7 +417,7 @@
                                 </button>
                             </div>
                             
-                            <div id="passwordMessage" class="success-message" style="display: none;"></div>
+                            <div id="passwordMessage" class="message" style="display: none;"></div>
                         </form>
                     </div>
                 </div>
@@ -465,7 +466,6 @@
         </div>
     </div>
 
-    <!-- Scripts -->
     <script>
         // Navegação entre seções
         document.addEventListener('DOMContentLoaded', function() {
@@ -475,6 +475,8 @@
                 link.addEventListener('click', function(e) {
                     e.preventDefault();
                     
+                    const sectionId = this.getAttribute('data-section');
+                    
                     // Remove active class from all links and sections
                     navLinks.forEach(l => l.classList.remove('active'));
                     document.querySelectorAll('.content-section').forEach(section => {
@@ -483,8 +485,10 @@
                     
                     // Add active class to clicked link and corresponding section
                     this.classList.add('active');
-                    const sectionId = this.getAttribute('data-section');
                     document.getElementById(sectionId).classList.add('active');
+                    
+                    // Atualizar título da página
+                    document.title = `Global - ${document.querySelector(`#${sectionId} h2`).textContent}`;
                 });
             });
         });
