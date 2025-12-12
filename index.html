@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Funil de Vendas - Global</title>
+    <title>Sistema de Funil de Vendas - Kanban</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Firebase SDKs (versão compatível) -->
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script>
     
     <style>
         /* RESET E BASE */
@@ -45,7 +44,7 @@
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -251,87 +250,212 @@
             align-items: center;
         }
 
-        /* CARDS DE ESTATÍSTICAS */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        /* KANBAN STYLES */
+        .kanban-container {
+            display: flex;
             gap: 20px;
-            margin-bottom: 30px;
+            overflow-x: auto;
+            padding: 10px 0;
+            min-height: 700px;
         }
 
-        .stat-card {
-            background-color: var(--branco);
+        .kanban-column {
+            background: #f8f9fa;
             border-radius: var(--radius);
-            padding: 20px;
-            box-shadow: var(--sombra);
-            border-top: 4px solid var(--verde-john-deere);
+            padding: 15px;
+            min-width: 320px;
+            max-width: 320px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #e9ecef;
         }
 
-        .stat-card:nth-child(2) { border-top-color: var(--azul); }
-        .stat-card:nth-child(3) { border-top-color: var(--laranja); }
-        .stat-card:nth-child(4) { border-top-color: var(--roxo); }
-        .stat-card:nth-child(5) { border-top-color: var(--vermelho); }
+        .kanban-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid;
+        }
 
-        .stat-title {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 8px;
+        .column-title {
+            font-weight: 600;
+            font-size: 16px;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        .stat-value {
-            font-size: 32px;
-            font-weight: 700;
-            color: var(--cinza-escuro);
-            line-height: 1;
+        .column-count {
+            background: rgba(0,0,0,0.1);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
         }
 
-        .stat-trend {
+        .kanban-cards {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+            max-height: 650px;
+            padding-right: 5px;
+        }
+
+        .kanban-card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 15px;
+            box-shadow: var(--sombra);
+            border-left: 4px solid #ddd;
+            cursor: grab;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .kanban-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+        }
+
+        .kanban-card.dragging {
+            opacity: 0.5;
+            transform: rotate(5deg);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .card-title {
+            font-weight: 600;
+            color: var(--cinza-escuro);
+            font-size: 15px;
+            margin-bottom: 5px;
+        }
+
+        .card-tag {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .tag-quente { background: #FFE5E5; color: #D32F2F; border-left-color: #D32F2F; }
+        .tag-morno { background: #FFF3CD; color: #856404; border-left-color: #856404; }
+        .tag-frio { background: #E3F2FD; color: #1565C0; border-left-color: #1565C0; }
+
+        .card-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
             font-size: 12px;
-            margin-top: 8px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .card-info-item {
             display: flex;
             align-items: center;
             gap: 4px;
         }
 
-        .trend-up { color: var(--verde-john-deere); }
-        .trend-down { color: var(--vermelho); }
-
-        /* GRÁFICOS */
-        .charts-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 25px;
-            margin-top: 30px;
-        }
-
-        .chart-box {
-            background-color: var(--branco);
-            border-radius: var(--radius);
-            padding: 20px;
-            box-shadow: var(--sombra);
-        }
-
-        .chart-title {
-            font-size: 16px;
-            color: var(--cinza-escuro);
-            margin-bottom: 15px;
+        .card-actions {
             display: flex;
+            justify-content: space-between;
             align-items: center;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+
+        .card-buttons {
+            display: flex;
             gap: 8px;
         }
 
-        .chart-placeholder {
-            height: 250px;
+        .btn-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #666;
+            font-size: 14px;
+            padding: 4px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .btn-icon:hover {
+            background: #f0f0f0;
+            color: var(--verde-john-deere);
+        }
+
+        .reminder-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #FFDE00;
+            color: #333;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
             display: flex;
-            flex-direction: column;
-            justify-content: center;
             align-items: center;
-            background-color: #fafafa;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        /* MODAL DE LEMBRETE */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
             border-radius: var(--radius);
-            color: #999;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            color: var(--verde-john-deere);
+            font-weight: 600;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
         }
 
         /* FORMULÁRIO DE LEAD */
@@ -417,137 +541,57 @@
             background-color: #545b62;
         }
 
-        /* LISTA DE LEADS */
-        .leads-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        .leads-table th {
-            background-color: var(--verde-john-deere);
-            color: var(--branco);
-            padding: 15px;
-            text-align: left;
-            font-weight: 600;
-        }
-
-        .leads-table td {
-            padding: 15px;
-            border-bottom: var(--borda);
-            vertical-align: middle;
-        }
-
-        .leads-table tr:hover {
-            background-color: rgba(54, 124, 43, 0.05);
-        }
-
-        .status-badge {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            display: inline-block;
-        }
-
-        .status-aberto { background-color: #E3F2FD; color: #0D47A1; }
-        .status-negociacao { background-color: #FFF3CD; color: #856404; }
-        .status-proposta { background-color: #D4EDDA; color: #155724; }
-        .status-ganho { background-color: #D1ECF1; color: #0C5460; }
-        .status-perdido { background-color: #F8D7DA; color: #721C24; }
-
-        .temp-badge {
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        .temp-frio { background-color: #D1E8FF; color: #004085; }
-        .temp-morno { background-color: #FFF3CD; color: #856404; }
-        .temp-quente { background-color: #FFD6D6; color: #721C24; }
-
-        .action-buttons {
+        /* BOTÕES DE GANHO/PERDIDO */
+        .result-buttons {
             display: flex;
-            gap: 8px;
-        }
-
-        .btn-sm {
-            padding: 6px 12px;
-            font-size: 13px;
-        }
-
-        /* FILTROS */
-        .filters-bar {
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: var(--radius);
-            margin-bottom: 20px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            align-items: flex-end;
-        }
-
-        .filter-group {
-            min-width: 180px;
-        }
-
-        /* TELA DE CRIAR VENDEDOR */
-        .admin-panel {
-            background-color: #f8f9fa;
-            padding: 25px;
-            border-radius: var(--radius);
-            border: 2px dashed #dee2e6;
-        }
-
-        .admin-title {
-            color: var(--verde-john-deere);
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
             gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed #ddd;
         }
 
-        /* RESPONSIVIDADE */
-        @media (max-width: 1024px) {
-            .main-content {
-                flex-direction: column;
-            }
-            
-            .sidebar {
-                width: 100%;
-                position: static;
-            }
-            
-            .charts-container {
-                grid-template-columns: 1fr;
-            }
+        .btn-success {
+            background-color: #28a745;
+            color: white;
         }
 
-        @media (max-width: 768px) {
-            .container {
-                padding: 10px;
-            }
-            
-            .dashboard-header {
-                flex-direction: column;
-                gap: 15px;
-                padding: 15px;
-            }
-            
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-            
-            .leads-table {
-                display: block;
-                overflow-x: auto;
-            }
+        .btn-success:hover {
+            background-color: #218838;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
+        /* LISTA DE ATIVIDADES */
+        .activities-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        .activity-item {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: var(--radius);
+            margin-bottom: 10px;
+            border-left: 3px solid var(--verde-john-deere);
+        }
+
+        .activity-title {
+            font-weight: 600;
+            color: var(--cinza-escuro);
+            margin-bottom: 5px;
+        }
+
+        .activity-date {
+            font-size: 12px;
+            color: #666;
         }
 
         /* UTILITIES */
@@ -585,18 +629,55 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* RESPONSIVIDADE */
+        @media (max-width: 1024px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                position: static;
+            }
+            
+            .kanban-container {
+                flex-direction: column;
+            }
+            
+            .kanban-column {
+                min-width: 100%;
+                max-width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .dashboard-header {
+                flex-direction: column;
+                gap: 15px;
+                padding: 15px;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
     <!-- TELA DE LOGIN -->
     <div id="loginScreen" class="login-container">
         <div class="login-box">
-            <img src="https://i.pinimg.com/736x/7f/c5/bd/7fc5bd1b54decf903b6478061724b09a.jpg" alt="Logo Global" class="logo-login" onerror="this.src='https://via.placeholder.com/180x60/367C2B/FFFFFF?text=LOGO+GLOBAL'">
+            <img src="https://encurtador.com.br/jiRd" alt="Logo Global" class="logo-login" onerror="this.src='https://via.placeholder.com/180x60/367C2B/FFFFFF?text=KANBAN+VENDAS'">
             <h2 class="login-title">Sistema de Funil de Vendas</h2>
-            <p class="login-subtitle">Global Tratores</p>
+            <p class="login-subtitle">Kanban visual para acompanhamento de leads</p>
             
             <form id="loginForm">
-                <input type="email" id="loginEmail" class="login-input" placeholder="E-mail corporativo" required value="teste@diretorglobal.com.br">
+                <input type="email" id="loginEmail" class="login-input" placeholder="E-mail corporativo" required value="vendedor@empresa.com">
                 <input type="password" id="loginPassword" class="login-input" placeholder="Senha" required value="123456">
                 <button type="submit" class="login-btn" id="loginBtn">
                     <span id="loginBtnText">Entrar no Sistema</span>
@@ -611,9 +692,9 @@
             <div class="mt-3">
                 <p style="font-size: 12px; color: #666; margin-top: 20px;">
                     <strong>Credenciais de teste:</strong><br>
-                    Diretor: teste@diretorglobal.com.br<br>
-                    Supervisor: teste@supervisorglobal.com.br<br>
-                    Vendedor: teste1@vendedorglobal.com.br<br>
+                    Diretor: diretor@empresa.com<br>
+                    Supervisor: supervisor@empresa.com<br>
+                    Vendedor: vendedor@empresa.com<br>
                     Senha: 123456
                 </p>
             </div>
@@ -625,13 +706,13 @@
         <!-- HEADER -->
         <header class="dashboard-header">
             <div class="logo-section">
-                <img src="https://encurtador.com.br/jiRd" alt="Logo Global" class="logo-dashboard" onerror="this.src='https://via.placeholder.com/180x45/367C2B/FFFFFF?text=LOGO+GLOBAL'">
+                <img src="https://encurtador.com.br/jiRd" alt="Logo Global" class="logo-dashboard" onerror="this.src='https://via.placeholder.com/180x45/367C2B/FFFFFF?text=KANBAN+VENDAS'">
             </div>
             
             <div class="user-info">
                 <div>
                     <div class="user-name" id="currentUserName">Carregando...</div>
-                    <div class="user-role" id="currentUserRole">Usuário</div>
+                    <div class="user-role" id="currentUserRole">Vendedor</div>
                 </div>
                 <button class="logout-btn" id="logoutBtn">
                     <i class="fas fa-sign-out-alt"></i> Sair
@@ -643,17 +724,14 @@
         <div class="main-content">
             <!-- MENU LATERAL -->
             <nav class="sidebar">
-                <a href="#" class="menu-item active" data-page="dashboard">
-                    <i class="fas fa-chart-line"></i> Dashboard
+                <a href="#" class="menu-item active" data-page="kanban">
+                    <i class="fas fa-columns"></i> Kanban de Vendas
                 </a>
-                <a href="#" class="menu-item" data-page="leads" id="menuLeads">
-                    <i class="fas fa-users"></i> Leads
-                </a>
-                <a href="#" class="menu-item" data-page="newLead" id="menuNewLead">
+                <a href="#" class="menu-item" data-page="newLead">
                     <i class="fas fa-plus-circle"></i> Novo Lead
                 </a>
-                <a href="#" class="menu-item" data-page="admin" id="menuAdmin" style="display: none;">
-                    <i class="fas fa-user-shield"></i> Administração
+                <a href="#" class="menu-item" data-page="activities">
+                    <i class="fas fa-bell"></i> Lembretes
                 </a>
                 <a href="#" class="menu-item" data-page="profile">
                     <i class="fas fa-user-cog"></i> Meu Perfil
@@ -662,178 +740,19 @@
             
             <!-- ÁREA DE CONTEÚDO -->
             <div class="content-area">
-                <!-- DASHBOARD DIRETOR/SUPERVISOR -->
-                <div id="pageDashboard" class="page-content">
+                <!-- KANBAN DE VENDAS -->
+                <div id="pageKanban" class="page-content">
                     <div class="page-title">
-                        <span>Dashboard Executivo</span>
+                        <span>Kanban de Vendas</span>
                         <div>
-                            <select id="dashboardMonth" class="form-control" style="width: auto; display: inline-block;">
-                                <option value="">Mês atual</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <!-- ESTATÍSTICAS -->
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-title">
-                                <i class="fas fa-users"></i> Total de Leads
-                            </div>
-                            <div class="stat-value" id="statTotalLeads">0</div>
-                            <div class="stat-trend">
-                                <i class="fas fa-arrow-up trend-up"></i>
-                                <span id="statTotalTrend">0% vs mês anterior</span>
-                            </div>
-                        </div>
-                        
-                        <div class="stat-card">
-                            <div class="stat-title">
-                                <i class="fas fa-handshake"></i> Taxa de Conversão
-                            </div>
-                            <div class="stat-value" id="statConversionRate">0%</div>
-                            <div class="stat-trend">
-                                <i class="fas fa-arrow-up trend-up"></i>
-                                <span id="statConversionTrend">0% vs meta</span>
-                            </div>
-                        </div>
-                        
-                        <div class="stat-card">
-                            <div class="stat-title">
-                                <i class="fas fa-trophy"></i> Leads Ganhos
-                            </div>
-                            <div class="stat-value" id="statWonLeads">0</div>
-                            <div class="stat-trend">
-                                <i class="fas fa-arrow-up trend-up"></i>
-                                <span id="statWonTrend">0% vs mês anterior</span>
-                            </div>
-                        </div>
-                        
-                        <div class="stat-card">
-                            <div class="stat-title">
-                                <i class="fas fa-fire"></i> Leads Quentes
-                            </div>
-                            <div class="stat-value" id="statHotLeads">0</div>
-                            <div class="stat-trend">
-                                <i class="fas fa-arrow-up trend-up"></i>
-                                <span>Alta prioridade</span>
-                            </div>
-                        </div>
-                        
-                        <div class="stat-card">
-                            <div class="stat-title">
-                                <i class="fas fa-calendar-check"></i> Visitas do Mês
-                            </div>
-                            <div class="stat-value" id="statMonthlyVisits">0</div>
-                            <div class="stat-trend">
-                                <i class="fas fa-calendar-alt"></i>
-                                <span id="statMonthLabel">Dez 2025</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- GRÁFICOS -->
-                    <div class="charts-container">
-                        <div class="chart-box">
-                            <h3 class="chart-title">
-                                <i class="fas fa-chart-pie"></i> Distribuição por Status
-                            </h3>
-                            <div class="chart-placeholder" id="chartStatus">
-                                <i class="fas fa-chart-pie" style="font-size: 48px; margin-bottom: 15px; color: #ccc;"></i>
-                                <p>Gráfico de distribuição de leads por status</p>
-                            </div>
-                        </div>
-                        
-                        <div class="chart-box">
-                            <h3 class="chart-title">
-                                <i class="fas fa-chart-bar"></i> Evolução Mensal
-                            </h3>
-                            <div class="chart-placeholder" id="chartMonthly">
-                                <i class="fas fa-chart-bar" style="font-size: 48px; margin-bottom: 15px; color: #ccc;"></i>
-                                <p>Gráfico de evolução de leads ao longo dos meses</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- LISTA DE LEADS -->
-                <div id="pageLeads" class="page-content hidden">
-                    <div class="page-title">
-                        <span>Gerenciamento de Leads</span>
-                        <button class="btn btn-primary" id="btnNewLeadFromList">
-                            <i class="fas fa-plus"></i> Novo Lead
-                        </button>
-                    </div>
-                    
-                    <!-- FILTROS -->
-                    <div class="filters-bar">
-                        <div class="filter-group">
-                            <label class="form-label">Status</label>
-                            <select id="filterStatus" class="form-control">
-                                <option value="">Todos os status</option>
-                                <option value="aberto">Aberto</option>
-                                <option value="negociacao">Negociação</option>
-                                <option value="proposta">Proposta Enviada</option>
-                                <option value="ganho">Ganho</option>
-                                <option value="perdido">Perdido</option>
-                            </select>
-                        </div>
-                        
-                        <div class="filter-group">
-                            <label class="form-label">Temperatura</label>
-                            <select id="filterTemperature" class="form-control">
-                                <option value="">Todas</option>
-                                <option value="quente">Quente</option>
-                                <option value="morno">Morno</option>
-                                <option value="frio">Frio</option>
-                            </select>
-                        </div>
-                        
-                        <div class="filter-group">
-                            <label class="form-label">Vendedor</label>
-                            <select id="filterSeller" class="form-control">
-                                <option value="">Todos</option>
-                            </select>
-                        </div>
-                        
-                        <div class="filter-group">
-                            <label class="form-label">Período</label>
-                            <select id="filterPeriod" class="form-control">
-                                <option value="current_month">Este mês</option>
-                                <option value="last_month">Mês anterior</option>
-                                <option value="last_3_months">Últimos 3 meses</option>
-                                <option value="all">Todos</option>
-                            </select>
-                        </div>
-                        
-                        <div class="filter-group">
-                            <button class="btn btn-secondary" id="btnResetFilters">
-                                <i class="fas fa-redo"></i> Limpar
+                            <button class="btn btn-primary" id="btnRefreshKanban">
+                                <i class="fas fa-sync-alt"></i> Atualizar
                             </button>
                         </div>
                     </div>
                     
-                    <!-- TABELA DE LEADS -->
-                    <div style="overflow-x: auto;">
-                        <table class="leads-table">
-                            <thead>
-                                <tr>
-                                    <th>Nome</th>
-                                    <th>Contato</th>
-                                    <th>Temperatura</th>
-                                    <th>Status</th>
-                                    <th>Vendedor</th>
-                                    <th>Última Visita</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="leadsTableBody">
-                                <tr>
-                                    <td colspan="7" class="text-center" style="padding: 40px;">
-                                        <i class="fas fa-spinner fa-spin"></i> Carregando leads...
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div class="kanban-container" id="kanbanBoard">
+                        <!-- Colunas serão criadas via JavaScript -->
                     </div>
                 </div>
                 
@@ -846,94 +765,118 @@
                     <form id="leadForm">
                         <div class="form-section">
                             <h3 style="margin-bottom: 20px; color: var(--verde-john-deere);">
-                                <i class="fas fa-user"></i> Informações do Lead
+                                <i class="fas fa-building"></i> Informações da Empresa
                             </h3>
                             
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label class="form-label" for="leadName">Nome Completo *</label>
-                                    <input type="text" id="leadName" class="form-control" required>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label class="form-label" for="leadPhone">Telefone *</label>
-                                    <input type="tel" id="leadPhone" class="form-control" required>
-                                </div>
+                            <div class="form-group">
+                                <label class="form-label" for="leadCompany">Nome da Empresa *</label>
+                                <input type="text" id="leadCompany" class="form-control" required placeholder="Ex: IGLA SERVIÇOS DE COBRANÇA LTDA">
                             </div>
                             
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label class="form-label" for="leadEmail">E-mail</label>
-                                    <input type="email" id="leadEmail" class="form-control">
+                                    <label class="form-label" for="leadCNPJ">CNPJ</label>
+                                    <input type="text" id="leadCNPJ" class="form-control" placeholder="00.000.000/0000-00">
                                 </div>
                                 
                                 <div class="form-group">
-                                    <label class="form-label" for="leadCity">Cidade *</label>
-                                    <input type="text" id="leadCity" class="form-control" required>
-                                </div>
-                            </div>
-                            
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label class="form-label" for="leadProduct">Produto de Interesse *</label>
-                                    <select id="leadProduct" class="form-control" required>
-                                        <option value="">Selecione</option>
-                                        <option value="trator">Trator</option>
-                                        <option value="colheitadeira">Colheitadeira</option>
-                                        <option value="plantadeira">Plantadeira</option>
-                                        <option value="pulverizador">Pulverizador</option>
-                                        <option value="implementos">Implementos</option>
-                                        <option value="pecas">Peças</option>
-                                        <option value="manutencao">Manutenção</option>
-                                        <option value="outro">Outro</option>
-                                    </select>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label class="form-label" for="leadTemperature">Temperatura *</label>
-                                    <select id="leadTemperature" class="form-control" required>
-                                        <option value="">Selecione</option>
-                                        <option value="frio">Frio</option>
-                                        <option value="morno">Morno</option>
-                                        <option value="quente">Quente</option>
-                                    </select>
+                                    <label class="form-label" for="leadSegment">Segmento</label>
+                                    <input type="text" id="leadSegment" class="form-control" placeholder="Ex: Contabilidade, Cobrança">
                                 </div>
                             </div>
                         </div>
                         
                         <div class="form-section">
                             <h3 style="margin-bottom: 20px; color: var(--verde-john-deere);">
-                                <i class="fas fa-chart-line"></i> Acompanhamento
+                                <i class="fas fa-user-tie"></i> Contato Principal
                             </h3>
                             
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label class="form-label" for="leadStatus">Status *</label>
-                                    <select id="leadStatus" class="form-control" required>
-                                        <option value="aberto">Aberto</option>
-                                        <option value="negociacao">Negociação</option>
-                                        <option value="proposta">Proposta Enviada</option>
-                                        <option value="ganho">Ganho</option>
-                                        <option value="perdido">Perdido</option>
+                                    <label class="form-label" for="leadName">Nome do Contato *</label>
+                                    <input type="text" id="leadName" class="form-control" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label" for="leadPosition">Cargo</label>
+                                    <input type="text" id="leadPosition" class="form-control" placeholder="Ex: Sócio, Gerente">
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="leadPhone">Telefone *</label>
+                                    <input type="tel" id="leadPhone" class="form-control" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label" for="leadEmail">E-mail</label>
+                                    <input type="email" id="leadEmail" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h3 style="margin-bottom: 20px; color: var(--verde-john-deere);">
+                                <i class="fas fa-chart-line"></i> Classificação
+                            </h3>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="leadTemperature">Temperatura *</label>
+                                    <select id="leadTemperature" class="form-control" required>
+                                        <option value="">Selecione</option>
+                                        <option value="quente">Quente</option>
+                                        <option value="morno">Morno</option>
+                                        <option value="frio">Frio</option>
                                     </select>
                                 </div>
                                 
                                 <div class="form-group">
-                                    <label class="form-label" for="leadVisitDate">Data da Visita *</label>
-                                    <input type="date" id="leadVisitDate" class="form-control" required>
+                                    <label class="form-label" for="leadSource">Origem do Lead</label>
+                                    <select id="leadSource" class="form-control">
+                                        <option value="">Selecione</option>
+                                        <option value="indicacao">Indicação</option>
+                                        <option value="visita">Visita Presencial</option>
+                                        <option value="telefone">Telefone</option>
+                                        <option value="instagram">Instagram</option>
+                                        <option value="google">Google</option>
+                                        <option value="feira">Feira / Evento</option>
+                                        <option value="outro">Outro</option>
+                                    </select>
                                 </div>
                             </div>
                             
                             <div class="form-group">
-                                <label class="form-label" for="leadSeller">Vendedor Responsável *</label>
-                                <select id="leadSeller" class="form-control" required>
-                                    <option value="">Selecione o vendedor</option>
-                                </select>
+                                <label class="form-label" for="leadProduct">Produto/Serviço de Interesse *</label>
+                                <input type="text" id="leadProduct" class="form-control" required placeholder="Ex: Sistema de Gestão, Consultoria">
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h3 style="margin-bottom: 20px; color: var(--verde-john-deere);">
+                                <i class="fas fa-calendar-alt"></i> Visita Inicial
+                            </h3>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="leadVisitDate">Data da Visita *</label>
+                                    <input type="date" id="leadVisitDate" class="form-control" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label" for="leadVisitType">Tipo de Visita</label>
+                                    <select id="leadVisitType" class="form-control">
+                                        <option value="presencial">Presencial</option>
+                                        <option value="online">Online</option>
+                                        <option value="telefonica">Telefônica</option>
+                                    </select>
+                                </div>
                             </div>
                             
                             <div class="form-group">
-                                <label class="form-label" for="leadNotes">Observações</label>
-                                <textarea id="leadNotes" class="form-control" rows="4" placeholder="Detalhes da visita, necessidades do cliente, próximos passos..."></textarea>
+                                <label class="form-label" for="leadNotes">Observações da Visita</label>
+                                <textarea id="leadNotes" class="form-control" rows="4" placeholder="Detalhes da visita, necessidades identificadas, próximos passos..."></textarea>
                             </div>
                         </div>
                         
@@ -948,57 +891,19 @@
                     </form>
                 </div>
                 
-                <!-- PAINEL ADMINISTRATIVO -->
-                <div id="pageAdmin" class="page-content hidden">
+                <!-- LEMBRETES E ATIVIDADES -->
+                <div id="pageActivities" class="page-content hidden">
                     <div class="page-title">
-                        <span>Painel Administrativo</span>
+                        <span>Lembretes e Atividades</span>
+                        <button class="btn btn-primary" id="btnAddReminder">
+                            <i class="fas fa-plus"></i> Novo Lembrete
+                        </button>
                     </div>
                     
-                    <div class="admin-panel">
-                        <h3 class="admin-title">
-                            <i class="fas fa-user-plus"></i> Criar Novo Vendedor
-                        </h3>
-                        
-                        <form id="createSellerForm">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label class="form-label" for="sellerName">Nome Completo *</label>
-                                    <input type="text" id="sellerName" class="form-control" required>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label class="form-label" for="sellerEmail">E-mail Corporativo *</label>
-                                    <input type="email" id="sellerEmail" class="form-control" required>
-                                </div>
-                            </div>
-                            
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label class="form-label" for="sellerPassword">Senha *</label>
-                                    <input type="password" id="sellerPassword" class="form-control" required minlength="6">
-                                    <small style="color: #666; font-size: 12px;">Mínimo 6 caracteres</small>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label class="form-label" for="sellerConfirmPassword">Confirmar Senha *</label>
-                                    <input type="password" id="sellerConfirmPassword" class="form-control" required>
-                                </div>
-                            </div>
-                            
-                            <div class="form-actions">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-user-plus"></i> Criar Vendedor
-                                </button>
-                            </div>
-                        </form>
-                        
-                        <div id="sellerList" class="mt-3">
-                            <h4 style="color: var(--verde-john-deere); margin-top: 30px; margin-bottom: 15px;">
-                                <i class="fas fa-users"></i> Vendedores Cadastrados
-                            </h4>
-                            <div class="chart-placeholder" id="sellersPlaceholder">
-                                <i class="fas fa-spinner fa-spin"></i> Carregando lista de vendedores...
-                            </div>
+                    <div id="remindersList" class="activities-list">
+                        <!-- Lembretes serão carregados aqui -->
+                        <div class="text-center" style="padding: 40px;">
+                            <i class="fas fa-spinner fa-spin"></i> Carregando lembretes...
                         </div>
                     </div>
                 </div>
@@ -1038,85 +943,147 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="form-section">
-                        <h3 style="margin-bottom: 20px; color: var(--verde-john-deere);">
-                            <i class="fas fa-key"></i> Alterar Senha
-                        </h3>
-                        
-                        <form id="changePasswordForm">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label class="form-label" for="currentPassword">Senha Atual</label>
-                                    <input type="password" id="currentPassword" class="form-control" required>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label class="form-label" for="newPassword">Nova Senha</label>
-                                    <input type="password" id="newPassword" class="form-control" required minlength="6">
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label class="form-label" for="confirmNewPassword">Confirmar Nova Senha</label>
-                                    <input type="password" id="confirmNewPassword" class="form-control" required>
-                                </div>
-                            </div>
-                            
-                            <div class="form-actions">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save"></i> Alterar Senha
-                                </button>
-                            </div>
-                        </form>
-                    </div>
                 </div>
             </div>
         </div>
-        
-        <!-- RODAPÉ -->
-        <footer style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6; text-align: center; color: #666; font-size: 12px;">
-            Sistema de Funil de Vendas Global &copy; 2025 • Desenvolvido com Firebase Realtime Database
-        </footer>
     </div>
 
-    <!-- MODAL DE EDIÇÃO DE LEAD -->
-    <div id="editLeadModal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; justify-content: center; align-items: center;">
-        <div style="background: white; padding: 30px; border-radius: 10px; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto;">
-            <h2 style="color: var(--verde-john-deere); margin-bottom: 20px;">Editar Lead</h2>
-            <form id="editLeadForm">
-                <div id="editLeadFormContent">
-                    <!-- Conteúdo será preenchido via JavaScript -->
+    <!-- MODAL DE DETALHES DO LEAD -->
+    <div id="leadDetailsModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Detalhes do Lead</h3>
+                <button class="close-modal" id="closeLeadModal">&times;</button>
+            </div>
+            <div id="leadDetailsContent">
+                <!-- Conteúdo será preenchido via JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE LEMBRETE -->
+    <div id="reminderModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Novo Lembrete</h3>
+                <button class="close-modal" id="closeReminderModal">&times;</button>
+            </div>
+            <form id="reminderForm">
+                <div class="form-group">
+                    <label class="form-label" for="reminderTitle">Título *</label>
+                    <input type="text" id="reminderTitle" class="form-control" required placeholder="Ex: Ligar para cliente">
                 </div>
-                <div style="display: flex; justify-content: flex-end; gap: 15px; margin-top: 25px;">
-                    <button type="button" class="btn btn-secondary" id="btnCancelEdit">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="reminderDate">Data *</label>
+                        <input type="date" id="reminderDate" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="reminderTime">Hora *</label>
+                        <input type="time" id="reminderTime" class="form-control" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="reminderLead">Associar ao Lead</label>
+                    <select id="reminderLead" class="form-control">
+                        <option value="">Selecionar lead (opcional)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="reminderNotes">Descrição</label>
+                    <textarea id="reminderNotes" class="form-control" rows="3" placeholder="Detalhes do lembrete..."></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="btnCancelReminder">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Lembrete</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- MODAL DE ALTERAÇÃO DE STATUS -->
-    <div id="changeStatusModal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; justify-content: center; align-items: center;">
-        <div style="background: white; padding: 30px; border-radius: 10px; width: 90%; max-width: 500px;">
-            <h2 style="color: var(--verde-john-deere); margin-bottom: 20px;">Alterar Status do Lead</h2>
-            <div class="form-group">
-                <label class="form-label">Novo Status</label>
-                <select id="newStatusSelect" class="form-control">
-                    <option value="aberto">Aberto</option>
-                    <option value="negociacao">Negociação</option>
-                    <option value="proposta">Proposta Enviada</option>
-                    <option value="ganho">Ganho</option>
-                    <option value="perdido">Perdido</option>
-                </select>
+    <!-- MODAL DE ATUALIZAR STATUS -->
+    <div id="updateStatusModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Atualizar Status do Lead</h3>
+                <button class="close-modal" id="closeStatusModal">&times;</button>
             </div>
-            <div class="form-group" style="margin-top: 15px;">
-                <label class="form-label">Observação (opcional)</label>
-                <textarea id="statusChangeNote" class="form-control" rows="3" placeholder="Motivo da mudança de status..."></textarea>
+            <form id="updateStatusForm">
+                <input type="hidden" id="updateLeadId">
+                
+                <div class="form-group">
+                    <label class="form-label" for="newStatus">Novo Status *</label>
+                    <select id="newStatus" class="form-control" required>
+                        <option value="contato_inicial">Contato Inicial</option>
+                        <option value="qualificacao">Qualificação</option>
+                        <option value="proposta">Proposta Enviada</option>
+                        <option value="negociacao">Negociação</option>
+                        <option value="fechamento">Fechamento</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="statusNotes">Observações</label>
+                    <textarea id="statusNotes" class="form-control" rows="3" placeholder="Observações sobre a mudança de status..."></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="btnCancelStatus">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Atualizar Status</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DE RESULTADO (GANHO/PERDIDO) -->
+    <div id="resultModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="resultModalTitle">Definir Resultado</h3>
+                <button class="close-modal" id="closeResultModal">&times;</button>
             </div>
-            <div style="display: flex; justify-content: flex-end; gap: 15px; margin-top: 25px;">
-                <button type="button" class="btn btn-secondary" id="btnCancelStatus">Cancelar</button>
-                <button type="button" class="btn btn-primary" id="btnConfirmStatus">Confirmar</button>
-            </div>
+            <form id="resultForm">
+                <input type="hidden" id="resultLeadId">
+                <input type="hidden" id="resultType">
+                
+                <div class="form-group">
+                    <label class="form-label" for="resultValue">Valor do Negócio (R$)</label>
+                    <input type="number" id="resultValue" class="form-control" step="0.01" placeholder="0,00">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="resultDate">Data do Fechamento *</label>
+                    <input type="date" id="resultDate" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="resultReason">Motivo</label>
+                    <select id="resultReason" class="form-control">
+                        <option value="">Selecione o motivo</option>
+                        <option value="preco">Preço</option>
+                        <option value="prazo">Prazo</option>
+                        <option value="qualidade">Qualidade do Produto</option>
+                        <option value="atendimento">Atendimento</option>
+                        <option value="concorrente">Concorrente</option>
+                        <option value="outro">Outro</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="resultNotes">Observações</label>
+                    <textarea id="resultNotes" class="form-control" rows="3" placeholder="Detalhes sobre o resultado..."></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="btnCancelResult">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Confirmar</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -1141,28 +1108,22 @@
         
         // ================ VARIÁVEIS GLOBAIS ================
         let currentUser = null;
-        let userRole = null;
+        let userRole = 'vendedor';
         let allLeads = [];
-        let allSellers = [];
-        let currentEditingLeadId = null;
-        let currentStatusChangeLeadId = null;
+        let allReminders = [];
+        let currentDraggingCard = null;
+        let currentLeadDetailsId = null;
 
-        // ================ DETECÇÃO DE PERFIL POR E-MAIL ================
-        function detectUserRole(email) {
-            if (!email) return 'vendedor';
-            
-            const emailLower = email.toLowerCase();
-            
-            if (emailLower.includes('diretorglobal') || emailLower === 'teste@diretorglobal.com.br') {
-                return 'diretor';
-            } else if (emailLower.includes('supervisorglobal') || emailLower === 'teste@supervisorglobal.com.br') {
-                return 'supervisor';
-            } else if (emailLower.includes('vendedorglobal') || emailLower.includes('teste1') || emailLower.includes('vendedor')) {
-                return 'vendedor';
-            }
-            
-            return 'vendedor';
-        }
+        // ================ COLUNAS DO KANBAN ================
+        const kanbanColumns = [
+            { id: 'contato_inicial', title: 'Contato Inicial', color: '#4A90E2', icon: 'fa-phone' },
+            { id: 'qualificacao', title: 'Qualificação', color: '#F5A623', icon: 'fa-search' },
+            { id: 'proposta', title: 'Proposta Enviada', color: '#7ED321', icon: 'fa-file-contract' },
+            { id: 'negociacao', title: 'Negociação', color: '#9D4EDD', icon: 'fa-handshake' },
+            { id: 'fechamento', title: 'Fechamento', color: '#50E3C2', icon: 'fa-check-circle' },
+            { id: 'ganho', title: 'Ganho', color: '#28a745', icon: 'fa-trophy' },
+            { id: 'perdido', title: 'Perdido', color: '#dc3545', icon: 'fa-times-circle' }
+        ];
 
         // ================ MANIPULAÇÃO DE INTERFACE ================
         function showScreen(screenId) {
@@ -1173,15 +1134,12 @@
         }
 
         function showPage(pageId) {
-            // Esconder todas as páginas
             document.querySelectorAll('.page-content').forEach(page => {
                 page.classList.add('hidden');
             });
             
-            // Mostrar a página solicitada
             document.getElementById(pageId).classList.remove('hidden');
             
-            // Atualizar menu ativo
             document.querySelectorAll('.menu-item').forEach(item => {
                 item.classList.remove('active');
             });
@@ -1191,50 +1149,11 @@
             if (menuItem) {
                 menuItem.classList.add('active');
             }
-        }
-
-        function updateUIForRole() {
-            const adminMenu = document.getElementById('menuAdmin');
-            const leadsMenu = document.getElementById('menuLeads');
-            const newLeadMenu = document.getElementById('menuNewLead');
             
-            // Resetar visibilidade
-            adminMenu.style.display = 'none';
-            
-            // Configurar conforme perfil
-            if (userRole === 'vendedor') {
-                // Vendedor só vê cadastro de lead e perfil
-                leadsMenu.style.display = 'none';
-                newLeadMenu.style.display = 'block';
-                showPage('pageNewLead');
-            } else if (userRole === 'supervisor') {
-                // Supervisor vê tudo exceto admin (mas pode criar vendedores)
-                leadsMenu.style.display = 'block';
-                newLeadMenu.style.display = 'block';
-                adminMenu.style.display = 'block';
-                showPage('pageDashboard');
-            } else if (userRole === 'diretor') {
-                // Diretor vê tudo
-                leadsMenu.style.display = 'block';
-                newLeadMenu.style.display = 'block';
-                adminMenu.style.display = 'block';
-                showPage('pageDashboard');
-            }
-            
-            // Atualizar informações do usuário
-            if (currentUser) {
-                document.getElementById('currentUserName').textContent = currentUser.displayName || currentUser.email;
-                document.getElementById('currentUserRole').textContent = 
-                    userRole === 'diretor' ? 'Diretor' : 
-                    userRole === 'supervisor' ? 'Supervisor' : 'Vendedor';
-                    
-                // Preencher perfil
-                document.getElementById('profileName').value = currentUser.displayName || currentUser.email;
-                document.getElementById('profileEmail').value = currentUser.email;
-                document.getElementById('profileRole').value = 
-                    userRole === 'diretor' ? 'Diretor' : 
-                    userRole === 'supervisor' ? 'Supervisor' : 'Vendedor';
-                document.getElementById('profileCreated').value = new Date(currentUser.metadata.createdAt).toLocaleDateString('pt-BR');
+            if (pageId === 'pageKanban') {
+                loadLeadsForKanban();
+            } else if (pageId === 'pageActivities') {
+                loadReminders();
             }
         }
 
@@ -1245,930 +1164,583 @@
             const errorDiv = document.getElementById('loginError');
             const errorText = document.getElementById('errorText');
             
-            // Mostrar loading
             loginBtn.disabled = true;
             loginBtnText.innerHTML = '<div class="loading"></div> Entrando...';
             
-            auth.signInWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    // Login bem-sucedido
-                    currentUser = userCredential.user;
-                    userRole = detectUserRole(currentUser.email);
-                    
-                    // Atualizar UI
-                    updateUIForRole();
-                    showScreen('dashboardScreen');
-                    
-                    // Carregar dados iniciais
-                    loadInitialData();
-                    
-                    // Redirecionar conforme perfil
-                    if (userRole === 'vendedor') {
-                        showPage('pageNewLead');
-                    } else {
-                        showPage('pageDashboard');
-                    }
-                })
-                .catch((error) => {
-                    // Tratar erro
-                    console.error('Erro no login:', error);
-                    
-                    let errorMessage = 'Erro ao fazer login. Verifique suas credenciais.';
-                    if (error.code === 'auth/user-not-found') {
-                        errorMessage = 'Usuário não encontrado.';
-                    } else if (error.code === 'auth/wrong-password') {
-                        errorMessage = 'Senha incorreta.';
-                    } else if (error.code === 'auth/too-many-requests') {
-                        errorMessage = 'Muitas tentativas. Tente novamente mais tarde.';
-                    }
-                    
-                    errorText.textContent = errorMessage;
-                    errorDiv.style.display = 'block';
-                })
-                .finally(() => {
-                    // Restaurar botão
-                    loginBtn.disabled = false;
-                    loginBtnText.textContent = 'Entrar no Sistema';
-                });
+            // Simulação de login para demonstração
+            setTimeout(() => {
+                currentUser = {
+                    uid: 'user_' + Date.now(),
+                    email: email,
+                    displayName: email.split('@')[0]
+                };
+                
+                if (email.includes('diretor')) userRole = 'diretor';
+                else if (email.includes('supervisor')) userRole = 'supervisor';
+                else userRole = 'vendedor';
+                
+                updateUIForRole();
+                showScreen('dashboardScreen');
+                showPage('pageKanban');
+                
+                loadInitialData();
+                
+                loginBtn.disabled = false;
+                loginBtnText.textContent = 'Entrar no Sistema';
+            }, 1000);
         }
 
         function handleLogout() {
-            auth.signOut().then(() => {
-                currentUser = null;
-                userRole = null;
-                allLeads = [];
-                allSellers = [];
-                
-                showScreen('loginScreen');
-                document.getElementById('loginForm').reset();
-                document.getElementById('loginError').style.display = 'none';
-                
-                // Restaurar valores padrão para facilitar teste
-                document.getElementById('loginEmail').value = 'teste@diretorglobal.com.br';
-                document.getElementById('loginPassword').value = '123456';
-            });
+            currentUser = null;
+            userRole = null;
+            allLeads = [];
+            allReminders = [];
+            
+            showScreen('loginScreen');
+            document.getElementById('loginForm').reset();
+            document.getElementById('loginError').style.display = 'none';
         }
 
-        function changePassword(currentPassword, newPassword) {
-            const user = auth.currentUser;
-            const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
-            
-            return user.reauthenticateWithCredential(credential)
-                .then(() => {
-                    return user.updatePassword(newPassword);
-                })
-                .then(() => {
-                    return { success: true, message: 'Senha alterada com sucesso!' };
-                })
-                .catch((error) => {
-                    console.error('Erro ao alterar senha:', error);
-                    let message = 'Erro ao alterar senha.';
-                    if (error.code === 'auth/wrong-password') {
-                        message = 'Senha atual incorreta.';
-                    }
-                    return { success: false, message: message };
-                });
+        function updateUIForRole() {
+            if (currentUser) {
+                document.getElementById('currentUserName').textContent = currentUser.displayName || currentUser.email;
+                document.getElementById('currentUserRole').textContent = userRole.charAt(0).toUpperCase() + userRole.slice(1);
+                
+                document.getElementById('profileName').value = currentUser.displayName || currentUser.email;
+                document.getElementById('profileEmail').value = currentUser.email;
+                document.getElementById('profileRole').value = userRole.charAt(0).toUpperCase() + userRole.slice(1);
+                document.getElementById('profileCreated').value = new Date().toLocaleDateString('pt-BR');
+            }
         }
 
         // ================ FUNÇÕES DE DADOS ================
         function loadInitialData() {
             if (!currentUser) return;
             
-            // Carregar vendedores
-            loadSellers();
-            
-            // Carregar leads
-            loadLeads();
-            
-            // Preencher seletor de vendedor no formulário
-            populateSellerSelect();
-            
-            // Preencher filtro de vendedor
-            populateSellerFilter();
-            
             // Configurar data atual no formulário
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('leadVisitDate').value = today;
+            document.getElementById('reminderDate').value = today;
+            document.getElementById('resultDate').value = today;
+            
+            loadLeadsForKanban();
+            loadReminders();
         }
 
-        function loadLeads() {
-            const today = new Date();
-            const currentYear = today.getFullYear();
-            const currentMonth = String(today.getMonth() + 1).padStart(2, '0');
+        function loadLeadsForKanban() {
+            // Dados de exemplo para demonstração
+            allLeads = [
+                {
+                    id: 'lead_1',
+                    company: 'IGLA SERVIÇOS DE COBRANÇA LTDA',
+                    cnpj: '12.345.678/0001-90',
+                    contact: 'Carlos Silva',
+                    position: 'Sócio',
+                    phone: '(11) 99999-8888',
+                    email: 'carlos@igla.com.br',
+                    temperature: 'quente',
+                    product: 'Sistema de Gestão',
+                    status: 'contato_inicial',
+                    visitDate: '2024-12-10',
+                    notes: 'Empresa interessada em sistema de cobrança. Contato muito receptivo.',
+                    createdAt: new Date().toISOString(),
+                    sellerId: currentUser.uid,
+                    sellerName: currentUser.displayName
+                },
+                {
+                    id: 'lead_2',
+                    company: 'CONTABILIDADE TECNICA ASSESSORIA E CONSULTORIA LTDA',
+                    cnpj: '98.765.432/0001-10',
+                    contact: 'Maria Oliveira',
+                    position: 'Gerente',
+                    phone: '(21) 98888-7777',
+                    email: 'maria@contabilidade.com.br',
+                    temperature: 'morno',
+                    product: 'Consultoria Fiscal',
+                    status: 'qualificacao',
+                    visitDate: '2024-12-09',
+                    notes: 'Precisa de assessoria para regularização fiscal.',
+                    createdAt: new Date().toISOString(),
+                    sellerId: currentUser.uid,
+                    sellerName: currentUser.displayName
+                },
+                {
+                    id: 'lead_3',
+                    company: 'ESCRITORIO CONTABIL CENTRAL LTDA',
+                    cnpj: '55.444.333/0001-20',
+                    contact: 'Roberto Santos',
+                    position: 'Diretor',
+                    phone: '(31) 97777-6666',
+                    email: 'roberto@escritorio.com.br',
+                    temperature: 'frio',
+                    product: 'Sistema Contábil',
+                    status: 'proposta',
+                    visitDate: '2024-12-08',
+                    notes: 'Aguardando retorno da proposta enviada.',
+                    createdAt: new Date().toISOString(),
+                    sellerId: currentUser.uid,
+                    sellerName: currentUser.displayName
+                }
+            ];
             
-            // Construir caminho base
-            let basePath = `leads/${currentYear}/${currentMonth}`;
-            
-            database.ref(basePath).once('value')
-                .then((snapshot) => {
-                    allLeads = [];
-                    const leadsData = snapshot.val();
-                    
-                    if (leadsData) {
-                        Object.keys(leadsData).forEach(leadId => {
-                            const lead = leadsData[leadId];
-                            lead.id = leadId;
-                            
-                            // Filtrar por vendedor se necessário
-                            if (userRole === 'vendedor') {
-                                if (lead.sellerId === currentUser.uid || lead.sellerEmail === currentUser.email) {
-                                    allLeads.push(lead);
-                                }
-                            } else {
-                                allLeads.push(lead);
-                            }
-                        });
-                    }
-                    
-                    // Atualizar UI
-                    updateLeadsTable();
-                    updateDashboardStats();
-                    updateCharts();
-                })
-                .catch((error) => {
-                    console.error('Erro ao carregar leads:', error);
-                });
-        }
-
-        function loadSellers() {
-            database.ref('users').once('value')
-                .then((snapshot) => {
-                    allSellers = [];
-                    const usersData = snapshot.val();
-                    
-                    if (usersData) {
-                        Object.keys(usersData).forEach(userId => {
-                            const user = usersData[userId];
-                            user.id = userId;
-                            
-                            // Determinar papel
-                            if (user.email) {
-                                user.role = detectUserRole(user.email);
-                                
-                                // Adicionar apenas vendedores à lista
-                                if (user.role === 'vendedor') {
-                                    allSellers.push(user);
-                                }
-                            }
-                        });
-                    }
-                    
-                    // Atualizar listas de vendedores
-                    populateSellerSelect();
-                    populateSellerFilter();
-                    updateSellersList();
-                })
-                .catch((error) => {
-                    console.error('Erro ao carregar vendedores:', error);
-                });
+            updateKanbanBoard();
+            populateReminderLeadSelect();
         }
 
         function saveLead(leadData, leadId = null) {
-            const today = new Date();
-            const visitDate = new Date(leadData.visitDate);
-            const year = visitDate.getFullYear();
-            const month = String(visitDate.getMonth() + 1).padStart(2, '0');
+            const newLeadId = leadId || `lead_${Date.now()}`;
             
-            // Determinar ID do lead
-            const newLeadId = leadId || `lead_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            
-            // Preparar dados completos do lead
             const completeLeadData = {
                 ...leadData,
                 id: newLeadId,
-                createdAt: leadId ? leadData.createdAt : new Date().toISOString(),
+                status: 'contato_inicial',
+                createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 sellerId: currentUser.uid,
-                sellerEmail: currentUser.email,
                 sellerName: currentUser.displayName || currentUser.email
             };
             
-            // Salvar no Firebase (estrutura ano/mês)
-            return database.ref(`leads/${year}/${month}/${newLeadId}`).set(completeLeadData)
-                .then(() => {
-                    // Atualizar lista local
-                    if (leadId) {
-                        // Atualizar lead existente
-                        const index = allLeads.findIndex(l => l.id === leadId);
-                        if (index !== -1) {
-                            allLeads[index] = completeLeadData;
-                        }
-                    } else {
-                        // Adicionar novo lead
-                        allLeads.push(completeLeadData);
-                    }
-                    
-                    // Atualizar UI
-                    updateLeadsTable();
-                    updateDashboardStats();
-                    updateCharts();
-                    
-                    return { success: true, message: 'Lead salvo com sucesso!' };
-                })
-                .catch((error) => {
-                    console.error('Erro ao salvar lead:', error);
-                    return { success: false, message: 'Erro ao salvar lead.' };
-                });
+            allLeads.push(completeLeadData);
+            
+            updateKanbanBoard();
+            populateReminderLeadSelect();
+            
+            return Promise.resolve({ success: true, message: 'Lead salvo com sucesso!' });
         }
 
-        function deleteLead(leadId) {
-            // Encontrar lead para obter data
-            const lead = allLeads.find(l => l.id === leadId);
-            if (!lead) return Promise.reject('Lead não encontrado');
+        function updateLeadStatus(leadId, newStatus, notes = '') {
+            const leadIndex = allLeads.findIndex(l => l.id === leadId);
+            if (leadIndex === -1) return Promise.reject('Lead não encontrado');
             
-            const visitDate = new Date(lead.visitDate);
-            const year = visitDate.getFullYear();
-            const month = String(visitDate.getMonth() + 1).padStart(2, '0');
+            allLeads[leadIndex].status = newStatus;
+            allLeads[leadIndex].updatedAt = new Date().toISOString();
             
-            return database.ref(`leads/${year}/${month}/${leadId}`).remove()
-                .then(() => {
-                    // Remover da lista local
-                    allLeads = allLeads.filter(l => l.id !== leadId);
-                    
-                    // Atualizar UI
-                    updateLeadsTable();
-                    updateDashboardStats();
-                    updateCharts();
-                    
-                    return { success: true, message: 'Lead excluído com sucesso!' };
-                })
-                .catch((error) => {
-                    console.error('Erro ao excluir lead:', error);
-                    return { success: false, message: 'Erro ao excluir lead.' };
-                });
-        }
-
-        function updateLeadStatus(leadId, newStatus, note = '') {
-            const lead = allLeads.find(l => l.id === leadId);
-            if (!lead) return Promise.reject('Lead não encontrado');
-            
-            const visitDate = new Date(lead.visitDate);
-            const year = visitDate.getFullYear();
-            const month = String(visitDate.getMonth() + 1).padStart(2, '0');
-            
-            // Atualizar status
-            const updates = {
-                status: newStatus,
-                updatedAt: new Date().toISOString()
-            };
-            
-            // Adicionar nota se fornecida
-            if (note) {
-                updates.statusNote = note;
-                updates.statusChangedBy = currentUser.email;
-                updates.statusChangedAt = new Date().toISOString();
-            }
-            
-            return database.ref(`leads/${year}/${month}/${leadId}`).update(updates)
-                .then(() => {
-                    // Atualizar localmente
-                    const index = allLeads.findIndex(l => l.id === leadId);
-                    if (index !== -1) {
-                        allLeads[index] = { ...allLeads[index], ...updates };
-                    }
-                    
-                    // Atualizar UI
-                    updateLeadsTable();
-                    updateDashboardStats();
-                    updateCharts();
-                    
-                    return { success: true, message: 'Status atualizado com sucesso!' };
-                })
-                .catch((error) => {
-                    console.error('Erro ao atualizar status:', error);
-                    return { success: false, message: 'Erro ao atualizar status.' };
-                });
-        }
-
-        function createSeller(userData) {
-            return auth.createUserWithEmailAndPassword(userData.email, userData.password)
-                .then((userCredential) => {
-                    const user = userCredential.user;
-                    
-                    // Atualizar nome do usuário
-                    return user.updateProfile({
-                        displayName: userData.name
-                    }).then(() => {
-                        // Salvar informações adicionais no Realtime Database
-                        return database.ref(`users/${user.uid}`).set({
-                            name: userData.name,
-                            email: userData.email,
-                            role: 'vendedor',
-                            createdBy: currentUser.email,
-                            createdAt: new Date().toISOString(),
-                            isActive: true
-                        });
-                    });
-                })
-                .then(() => {
-                    // Atualizar lista de vendedores
-                    loadSellers();
-                    return { success: true, message: 'Vendedor criado com sucesso!' };
-                })
-                .catch((error) => {
-                    console.error('Erro ao criar vendedor:', error);
-                    let message = 'Erro ao criar vendedor.';
-                    if (error.code === 'auth/email-already-in-use') {
-                        message = 'Este e-mail já está em uso.';
-                    } else if (error.code === 'auth/weak-password') {
-                        message = 'Senha muito fraca. Use pelo menos 6 caracteres.';
-                    }
-                    return { success: false, message: message };
-                });
-        }
-
-        // ================ ATUALIZAÇÃO DE UI ================
-        function updateLeadsTable() {
-            const tbody = document.getElementById('leadsTableBody');
-            if (!tbody) return;
-            
-            // Aplicar filtros
-            let filteredLeads = [...allLeads];
-            
-            const statusFilter = document.getElementById('filterStatus').value;
-            const tempFilter = document.getElementById('filterTemperature').value;
-            const sellerFilter = document.getElementById('filterSeller').value;
-            const periodFilter = document.getElementById('filterPeriod').value;
-            
-            if (statusFilter) {
-                filteredLeads = filteredLeads.filter(lead => lead.status === statusFilter);
-            }
-            
-            if (tempFilter) {
-                filteredLeads = filteredLeads.filter(lead => lead.temperature === tempFilter);
-            }
-            
-            if (sellerFilter) {
-                filteredLeads = filteredLeads.filter(lead => lead.sellerId === sellerFilter || lead.sellerEmail === sellerFilter);
-            }
-            
-            // Filtrar por período
-            if (periodFilter !== 'all') {
-                const today = new Date();
-                let startDate = new Date();
-                
-                switch (periodFilter) {
-                    case 'current_month':
-                        startDate.setDate(1); // Primeiro dia do mês
-                        break;
-                    case 'last_month':
-                        startDate.setMonth(today.getMonth() - 1);
-                        startDate.setDate(1);
-                        break;
-                    case 'last_3_months':
-                        startDate.setMonth(today.getMonth() - 3);
-                        break;
+            if (notes) {
+                if (!allLeads[leadIndex].statusHistory) {
+                    allLeads[leadIndex].statusHistory = [];
                 }
-                
-                filteredLeads = filteredLeads.filter(lead => {
-                    const leadDate = new Date(lead.visitDate || lead.createdAt);
-                    return leadDate >= startDate;
+                allLeads[leadIndex].statusHistory.push({
+                    status: newStatus,
+                    date: new Date().toISOString(),
+                    notes: notes
                 });
             }
             
-            // Ordenar por data mais recente
-            filteredLeads.sort((a, b) => {
-                return new Date(b.visitDate || b.createdAt) - new Date(a.visitDate || a.createdAt);
-            });
+            updateKanbanBoard();
             
-            // Atualizar tabela
-            if (filteredLeads.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="7" class="text-center" style="padding: 40px;">
-                            <i class="fas fa-inbox"></i> Nenhum lead encontrado com os filtros atuais.
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            let html = '';
-            filteredLeads.forEach(lead => {
-                // Determinar classe do status
-                let statusClass = 'status-aberto';
-                let statusText = 'Aberto';
-                
-                switch(lead.status) {
-                    case 'negociacao': 
-                        statusClass = 'status-negociacao'; 
-                        statusText = 'Negociação';
-                        break;
-                    case 'proposta': 
-                        statusClass = 'status-proposta'; 
-                        statusText = 'Proposta';
-                        break;
-                    case 'ganho': 
-                        statusClass = 'status-ganho'; 
-                        statusText = 'Ganho';
-                        break;
-                    case 'perdido': 
-                        statusClass = 'status-perdido'; 
-                        statusText = 'Perdido';
-                        break;
-                }
-                
-                // Determinar classe da temperatura
-                let tempClass = 'temp-frio';
-                let tempText = 'Frio';
-                
-                switch(lead.temperature) {
-                    case 'morno': 
-                        tempClass = 'temp-morno'; 
-                        tempText = 'Morno';
-                        break;
-                    case 'quente': 
-                        tempClass = 'temp-quente'; 
-                        tempText = 'Quente';
-                        break;
-                }
-                
-                // Formatar data
-                const visitDate = lead.visitDate ? new Date(lead.visitDate).toLocaleDateString('pt-BR') : '-';
-                
-                // Determinar ações disponíveis
-                const canEdit = userRole === 'supervisor' || userRole === 'diretor' || lead.sellerId === currentUser.uid;
-                const canChangeStatus = userRole === 'supervisor' || userRole === 'diretor' || lead.sellerId === currentUser.uid;
-                const canDelete = userRole === 'supervisor' || userRole === 'diretor';
-                
-                html += `
-                    <tr>
-                        <td><strong>${lead.name || '(Sem nome)'}</strong><br>
-                            <small>${lead.product || ''}</small>
-                        </td>
-                        <td>
-                            ${lead.phone || ''}<br>
-                            <small>${lead.email || ''}</small>
-                        </td>
-                        <td><span class="temp-badge ${tempClass}">${tempText}</span></td>
-                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                        <td>${lead.sellerName || lead.sellerEmail || ''}</td>
-                        <td>${visitDate}</td>
-                        <td>
-                            <div class="action-buttons">
-                                ${canEdit ? `<button class="btn btn-sm btn-secondary" onclick="editLead('${lead.id}')"><i class="fas fa-edit"></i></button>` : ''}
-                                ${canChangeStatus ? `<button class="btn btn-sm btn-primary" onclick="changeLeadStatus('${lead.id}')"><i class="fas fa-exchange-alt"></i></button>` : ''}
-                                ${canDelete ? `<button class="btn btn-sm btn-danger" onclick="deleteLeadPrompt('${lead.id}')"><i class="fas fa-trash"></i></button>` : ''}
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            });
-            
-            tbody.innerHTML = html;
+            return Promise.resolve({ success: true, message: 'Status atualizado com sucesso!' });
         }
 
-        function updateDashboardStats() {
-            // Calcular estatísticas
-            const totalLeads = allLeads.length;
+        function setLeadResult(leadId, resultType, resultData) {
+            const leadIndex = allLeads.findIndex(l => l.id === leadId);
+            if (leadIndex === -1) return Promise.reject('Lead não encontrado');
             
-            const leadsByStatus = {
-                aberto: 0,
-                negociacao: 0,
-                proposta: 0,
-                ganho: 0,
-                perdido: 0
-            };
+            allLeads[leadIndex].status = resultType;
+            allLeads[leadIndex].result = resultData;
+            allLeads[leadIndex].updatedAt = new Date().toISOString();
+            allLeads[leadIndex].closedAt = new Date().toISOString();
             
-            const leadsByTemp = {
-                frio: 0,
-                morno: 0,
-                quente: 0
-            };
+            updateKanbanBoard();
             
-            const today = new Date();
-            const currentMonth = today.getMonth();
-            const currentYear = today.getFullYear();
-            
-            let monthlyLeads = 0;
-            let wonLeads = 0;
-            let hotLeads = 0;
-            
-            allLeads.forEach(lead => {
-                // Contar por status
-                if (leadsByStatus[lead.status] !== undefined) {
-                    leadsByStatus[lead.status]++;
-                }
-                
-                // Contar por temperatura
-                if (leadsByTemp[lead.temperature] !== undefined) {
-                    leadsByTemp[lead.temperature]++;
-                }
-                
-                // Contar ganhos
-                if (lead.status === 'ganho') {
-                    wonLeads++;
-                }
-                
-                // Contar quentes
-                if (lead.temperature === 'quente') {
-                    hotLeads++;
-                }
-                
-                // Contar do mês atual
-                if (lead.visitDate) {
-                    const visitDate = new Date(lead.visitDate);
-                    if (visitDate.getMonth() === currentMonth && visitDate.getFullYear() === currentYear) {
-                        monthlyLeads++;
-                    }
-                }
+            return Promise.resolve({ 
+                success: true, 
+                message: `Lead marcado como ${resultType === 'ganho' ? 'GANHO' : 'PERDIDO'} com sucesso!` 
             });
-            
-            // Calcular taxa de conversão
-            const conversionRate = totalLeads > 0 ? ((wonLeads / totalLeads) * 100).toFixed(1) : 0;
-            
-            // Atualizar UI
-            document.getElementById('statTotalLeads').textContent = totalLeads;
-            document.getElementById('statConversionRate').textContent = `${conversionRate}%`;
-            document.getElementById('statWonLeads').textContent = wonLeads;
-            document.getElementById('statHotLeads').textContent = hotLeads;
-            document.getElementById('statMonthlyVisits').textContent = monthlyLeads;
-            
-            // Atualizar label do mês
-            const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-            document.getElementById('statMonthLabel').textContent = `${monthNames[currentMonth]} ${currentYear}`;
-            
-            // Atualizar tendências (simplificado)
-            document.getElementById('statTotalTrend').textContent = '+5% vs mês anterior';
-            document.getElementById('statConversionTrend').textContent = '+2% vs meta';
-            document.getElementById('statWonTrend').textContent = '+10% vs mês anterior';
         }
 
-        function updateCharts() {
-            // Gráfico de status (simplificado com HTML/CSS)
-            const statusChart = document.getElementById('chartStatus');
-            if (!statusChart) return;
-            
-            // Calcular distribuição
-            const leadsByStatus = {
-                aberto: 0,
-                negociacao: 0,
-                proposta: 0,
-                ganho: 0,
-                perdido: 0
+        function saveReminder(reminderData) {
+            const newReminder = {
+                id: `reminder_${Date.now()}`,
+                ...reminderData,
+                createdAt: new Date().toISOString(),
+                userId: currentUser.uid,
+                completed: false
             };
             
-            allLeads.forEach(lead => {
-                if (leadsByStatus[lead.status] !== undefined) {
-                    leadsByStatus[lead.status]++;
+            allReminders.push(newReminder);
+            
+            return Promise.resolve({ success: true, message: 'Lembrete salvo com sucesso!' });
+        }
+
+        function loadReminders() {
+            // Dados de exemplo
+            allReminders = [
+                {
+                    id: 'reminder_1',
+                    title: 'Ligar para IGLA SERVIÇOS',
+                    date: '2024-12-12',
+                    time: '14:00',
+                    leadId: 'lead_1',
+                    notes: 'Confirmar reunião para demonstração do sistema',
+                    createdAt: new Date().toISOString(),
+                    completed: false
+                },
+                {
+                    id: 'reminder_2',
+                    title: 'Enviar proposta para CONTABILIDADE TECNICA',
+                    date: '2024-12-13',
+                    time: '10:00',
+                    leadId: 'lead_2',
+                    notes: 'Preparar proposta detalhada',
+                    createdAt: new Date().toISOString(),
+                    completed: false
                 }
-            });
+            ];
             
-            const total = allLeads.length || 1;
+            updateRemindersList();
+        }
+
+        // ================ KANBAN FUNCTIONS ================
+        function updateKanbanBoard() {
+            const kanbanBoard = document.getElementById('kanbanBoard');
+            if (!kanbanBoard) return;
             
-            // Cores para cada status
-            const statusColors = {
-                aberto: '#4A90E2',
-                negociacao: '#F5A623',
-                proposta: '#7ED321',
-                ganho: '#50E3C2',
-                perdido: '#D0021B'
-            };
+            kanbanBoard.innerHTML = '';
             
-            // Criar gráfico de pizza simplificado
-            let html = '<div style="display: flex; align-items: center; justify-content: center; height: 200px;">';
-            html += '<div style="width: 180px; height: 180px; border-radius: 50%; position: relative; background: conic-gradient(';
-            
-            const statusItems = [];
-            let startAngle = 0;
-            
-            Object.keys(leadsByStatus).forEach(status => {
-                const count = leadsByStatus[status];
-                if (count > 0) {
-                    const percentage = (count / total) * 100;
-                    const angle = (percentage / 100) * 360;
-                    
-                    statusItems.push({
-                        status,
-                        count,
-                        percentage,
-                        startAngle,
-                        angle,
-                        color: statusColors[status] || '#CCCCCC'
-                    });
-                    
-                    startAngle += angle;
-                }
-            });
-            
-            // Se não houver dados
-            if (statusItems.length === 0) {
-                html = '<div class="chart-placeholder">';
-                html += '<i class="fas fa-chart-pie" style="font-size: 48px; margin-bottom: 15px; color: #ccc;"></i>';
-                html += '<p>Nenhum dado disponível para o gráfico</p>';
-                html += '</div>';
-                statusChart.innerHTML = html;
-                return;
-            }
-            
-            // Construir gradiente conico
-            const gradientParts = statusItems.map(item => 
-                `${item.color} ${item.startAngle}deg ${item.startAngle + item.angle}deg`
-            ).join(', ');
-            
-            html += gradientParts + ');"></div>';
-            html += '</div>';
-            
-            // Legenda
-            html += '<div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; justify-content: center;">';
-            statusItems.forEach(item => {
-                html += `
-                    <div style="display: flex; align-items: center; font-size: 12px;">
-                        <div style="width: 12px; height: 12px; background-color: ${item.color}; margin-right: 6px; border-radius: 2px;"></div>
-                        ${item.status.charAt(0).toUpperCase() + item.status.slice(1)}: ${item.count} (${item.percentage.toFixed(1)}%)
+            kanbanColumns.forEach(column => {
+                const columnLeads = allLeads.filter(lead => lead.status === column.id);
+                
+                const columnElement = document.createElement('div');
+                columnElement.className = 'kanban-column';
+                columnElement.dataset.column = column.id;
+                
+                columnElement.innerHTML = `
+                    <div class="kanban-header" style="border-bottom-color: ${column.color}">
+                        <div class="column-title">
+                            <i class="fas ${column.icon}"></i>
+                            ${column.title}
+                        </div>
+                        <div class="column-count">${columnLeads.length}</div>
+                    </div>
+                    <div class="kanban-cards" id="cards-${column.id}">
+                        ${columnLeads.map(lead => createKanbanCard(lead)).join('')}
+                        ${columnLeads.length === 0 ? '<div class="text-center" style="padding: 20px; color: #999; font-size: 14px;">Nenhum lead</div>' : ''}
                     </div>
                 `;
-            });
-            html += '</div>';
-            
-            statusChart.innerHTML = html;
-            
-            // Gráfico mensal (simplificado)
-            const monthlyChart = document.getElementById('chartMonthly');
-            if (monthlyChart) {
-                // Agrupar por mês
-                const monthlyData = {};
                 
-                allLeads.forEach(lead => {
-                    if (lead.visitDate) {
-                        const date = new Date(lead.visitDate);
-                        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-                        
-                        if (!monthlyData[monthKey]) {
-                            monthlyData[monthKey] = 0;
-                        }
-                        monthlyData[monthKey]++;
-                    }
-                });
-                
-                // Ordenar por mês
-                const sortedMonths = Object.keys(monthlyData).sort();
-                const last6Months = sortedMonths.slice(-6); // Últimos 6 meses
-                
-                if (last6Months.length === 0) {
-                    monthlyChart.innerHTML = `
-                        <div class="chart-placeholder">
-                            <i class="fas fa-chart-bar" style="font-size: 48px; margin-bottom: 15px; color: #ccc;"></i>
-                            <p>Nenhum dado disponível para o gráfico</p>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                // Encontrar valor máximo para escala
-                const maxValue = Math.max(...Object.values(monthlyData));
-                
-                // Criar gráfico de barras simplificado
-                let chartHtml = '<div style="height: 200px; display: flex; align-items: flex-end; gap: 15px; padding: 20px 0;">';
-                
-                last6Months.forEach(monthKey => {
-                    const value = monthlyData[monthKey] || 0;
-                    const height = maxValue > 0 ? (value / maxValue) * 150 : 0;
-                    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-                    
-                    const [year, month] = monthKey.split('-');
-                    const monthName = monthNames[parseInt(month) - 1];
-                    
-                    chartHtml += `
-                        <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
-                            <div style="width: 40px; height: ${height}px; background-color: var(--verde-john-deere); border-radius: 4px 4px 0 0;"></div>
-                            <div style="font-size: 11px; margin-top: 8px; text-align: center;">
-                                ${monthName}<br>${year}
-                            </div>
-                            <div style="font-size: 10px; color: #666; margin-top: 4px;">${value}</div>
-                        </div>
-                    `;
-                });
-                
-                chartHtml += '</div>';
-                monthlyChart.innerHTML = chartHtml;
-            }
-        }
-
-        function populateSellerSelect() {
-            const sellerSelect = document.getElementById('leadSeller');
-            if (!sellerSelect) return;
-            
-            // Limpar opções
-            sellerSelect.innerHTML = '<option value="">Selecione o vendedor</option>';
-            
-            // Se for vendedor, só pode selecionar a si mesmo
-            if (userRole === 'vendedor') {
-                sellerSelect.innerHTML = `
-                    <option value="${currentUser.uid}" selected>
-                        ${currentUser.displayName || currentUser.email} (Eu)
-                    </option>
-                `;
-                sellerSelect.disabled = true;
-                return;
-            }
-            
-            // Para supervisor e diretor, mostrar todos os vendedores
-            sellerSelect.disabled = false;
-            
-            // Adicionar opção para o próprio usuário se for vendedor também
-            if (userRole === 'supervisor' || userRole === 'diretor') {
-                sellerSelect.innerHTML += `
-                    <option value="${currentUser.uid}">
-                        ${currentUser.displayName || currentUser.email} (Eu)
-                    </option>
-                `;
-            }
-            
-            // Adicionar outros vendedores
-            allSellers.forEach(seller => {
-                if (seller.id !== currentUser.uid) {
-                    sellerSelect.innerHTML += `
-                        <option value="${seller.id}">${seller.name || seller.email}</option>
-                    `;
-                }
+                kanbanBoard.appendChild(columnElement);
             });
             
-            // Por padrão, selecionar o próprio usuário
-            sellerSelect.value = currentUser.uid;
+            // Adicionar eventos de drag and drop
+            setupDragAndDrop();
         }
 
-        function populateSellerFilter() {
-            const sellerFilter = document.getElementById('filterSeller');
-            if (!sellerFilter) return;
+        function createKanbanCard(lead) {
+            const tagClass = `tag-${lead.temperature}`;
+            const tagText = lead.temperature === 'quente' ? 'Quente' : 
+                          lead.temperature === 'morno' ? 'Morno' : 'Frio';
             
-            // Limpar opções
-            sellerFilter.innerHTML = '<option value="">Todos</option>';
+            const hasReminders = allReminders.some(r => r.leadId === lead.id && !r.completed);
             
-            // Adicionar opção para mostrar apenas meus leads
-            sellerFilter.innerHTML += `
-                <option value="${currentUser.uid}">Meus leads</option>
+            return `
+                <div class="kanban-card" data-lead-id="${lead.id}" draggable="true">
+                    ${hasReminders ? '<div class="reminder-badge" title="Possui lembretes"><i class="fas fa-bell"></i></div>' : ''}
+                    
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title">${lead.company}</div>
+                            <span class="card-tag ${tagClass}">${tagText}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card-info">
+                        <div class="card-info-item">
+                            <i class="fas fa-user"></i>
+                            <span>${lead.contact}</span>
+                        </div>
+                        <div class="card-info-item">
+                            <i class="fas fa-phone"></i>
+                            <span>${lead.phone}</span>
+                        </div>
+                    </div>
+                    
+                    <div style="font-size: 13px; color: #666; margin: 10px 0;">
+                        <strong>Produto:</strong> ${lead.product}
+                    </div>
+                    
+                    <div class="card-actions">
+                        <div>
+                            <small style="color: #999; font-size: 11px;">
+                                <i class="fas fa-calendar"></i> ${new Date(lead.visitDate).toLocaleDateString('pt-BR')}
+                            </small>
+                        </div>
+                        <div class="card-buttons">
+                            <button class="btn-icon" onclick="showLeadDetails('${lead.id}')" title="Ver detalhes">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn-icon" onclick="showUpdateStatusModal('${lead.id}')" title="Alterar status">
+                                <i class="fas fa-exchange-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    ${lead.status === 'fechamento' ? `
+                        <div class="result-buttons">
+                            <button class="btn btn-success btn-sm" onclick="showResultModal('${lead.id}', 'ganho')" style="flex: 1;">
+                                <i class="fas fa-trophy"></i> Ganho
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="showResultModal('${lead.id}', 'perdido')" style="flex: 1;">
+                                <i class="fas fa-times"></i> Perdido
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
             `;
-            
-            // Adicionar outros vendedores (apenas para supervisor e diretor)
-            if (userRole === 'supervisor' || userRole === 'diretor') {
-                allSellers.forEach(seller => {
-                    if (seller.id !== currentUser.uid) {
-                        sellerFilter.innerHTML += `
-                            <option value="${seller.id}">${seller.name || seller.email}</option>
-                        `;
-                    }
-                });
-            }
         }
 
-        function updateSellersList() {
-            const sellersList = document.getElementById('sellersPlaceholder');
-            if (!sellersList) return;
+        function setupDragAndDrop() {
+            const cards = document.querySelectorAll('.kanban-card[draggable="true"]');
+            const columns = document.querySelectorAll('.kanban-column');
             
-            if (allSellers.length === 0) {
-                sellersList.innerHTML = '<p>Nenhum vendedor cadastrado.</p>';
+            cards.forEach(card => {
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragend', handleDragEnd);
+            });
+            
+            columns.forEach(column => {
+                column.addEventListener('dragover', handleDragOver);
+                column.addEventListener('drop', handleDrop);
+            });
+        }
+
+        function handleDragStart(e) {
+            currentDraggingCard = e.target;
+            currentDraggingCard.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', e.target.dataset.leadId);
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            currentDraggingCard = null;
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            
+            const leadId = e.dataTransfer.getData('text/plain');
+            const column = e.target.closest('.kanban-column');
+            
+            if (!column || !leadId) return;
+            
+            const newStatus = column.dataset.column;
+            
+            // Não permitir arrastar para colunas de resultado
+            if (newStatus === 'ganho' || newStatus === 'perdido') {
+                alert('Use os botões "Ganho" ou "Perdido" para definir o resultado final.');
                 return;
             }
             
-            let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">';
-            
-            allSellers.forEach(seller => {
-                html += `
-                    <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
-                        <div style="font-weight: 600; color: var(--verde-john-deere);">${seller.name || 'Sem nome'}</div>
-                        <div style="font-size: 12px; color: #666; margin-top: 5px;">${seller.email}</div>
-                        <div style="font-size: 11px; color: #999; margin-top: 5px;">
-                            Cadastrado em: ${seller.createdAt ? new Date(seller.createdAt).toLocaleDateString('pt-BR') : 'N/A'}
-                        </div>
-                    </div>
-                `;
-            });
-            
-            html += '</div>';
-            sellersList.innerHTML = html;
+            updateLeadStatus(leadId, newStatus, `Status alterado via Kanban`);
         }
 
-        // ================ FUNÇÕES EXPORTADAS PARA ONCLICK ================
-        window.editLead = function(leadId) {
+        // ================ MODAL FUNCTIONS ================
+        window.showLeadDetails = function(leadId) {
             const lead = allLeads.find(l => l.id === leadId);
             if (!lead) return;
             
-            currentEditingLeadId = leadId;
+            currentLeadDetailsId = leadId;
             
-            // Preencher formulário de edição
-            const formContent = document.getElementById('editLeadFormContent');
-            formContent.innerHTML = `
+            const tagClass = `tag-${lead.temperature}`;
+            const tagText = lead.temperature === 'quente' ? 'Quente' : 
+                          lead.temperature === 'morno' ? 'Morno' : 'Frio';
+            
+            const content = document.getElementById('leadDetailsContent');
+            content.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: var(--verde-john-deere); margin-bottom: 10px;">${lead.company}</h4>
+                    <span class="card-tag ${tagClass}">${tagText}</span>
+                </div>
+                
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label">Nome Completo</label>
-                        <input type="text" class="form-control" id="editLeadName" value="${lead.name || ''}" required>
+                        <label class="form-label">CNPJ</label>
+                        <div class="form-control" style="background: #f8f9fa;">${lead.cnpj || 'Não informado'}</div>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Telefone</label>
-                        <input type="tel" class="form-control" id="editLeadPhone" value="${lead.phone || ''}" required>
+                        <label class="form-label">Segmento</label>
+                        <div class="form-control" style="background: #f8f9fa;">${lead.segment || 'Não informado'}</div>
                     </div>
                 </div>
+                
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label">E-mail</label>
-                        <input type="email" class="form-control" id="editLeadEmail" value="${lead.email || ''}">
+                        <label class="form-label">Contato</label>
+                        <div class="form-control" style="background: #f8f9fa;">${lead.contact} - ${lead.position || ''}</div>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Cidade</label>
-                        <input type="text" class="form-control" id="editLeadCity" value="${lead.city || ''}" required>
+                        <label class="form-label">Telefone/E-mail</label>
+                        <div class="form-control" style="background: #f8f9fa;">
+                            ${lead.phone}<br>
+                            ${lead.email || ''}
+                        </div>
                     </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Produto de Interesse</label>
-                        <select class="form-control" id="editLeadProduct" required>
-                            <option value="">Selecione</option>
-                            <option value="trator" ${lead.product === 'trator' ? 'selected' : ''}>Trator</option>
-                            <option value="colheitadeira" ${lead.product === 'colheitadeira' ? 'selected' : ''}>Colheitadeira</option>
-                            <option value="plantadeira" ${lead.product === 'plantadeira' ? 'selected' : ''}>Plantadeira</option>
-                            <option value="pulverizador" ${lead.product === 'pulverizador' ? 'selected' : ''}>Pulverizador</option>
-                            <option value="implementos" ${lead.product === 'implementos' ? 'selected' : ''}>Implementos</option>
-                            <option value="pecas" ${lead.product === 'pecas' ? 'selected' : ''}>Peças</option>
-                            <option value="manutencao" ${lead.product === 'manutencao' ? 'selected' : ''}>Manutenção</option>
-                            <option value="outro" ${lead.product === 'outro' ? 'selected' : ''}>Outro</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Temperatura</label>
-                        <select class="form-control" id="editLeadTemperature" required>
-                            <option value="">Selecione</option>
-                            <option value="frio" ${lead.temperature === 'frio' ? 'selected' : ''}>Frio</option>
-                            <option value="morno" ${lead.temperature === 'morno' ? 'selected' : ''}>Morno</option>
-                            <option value="quente" ${lead.temperature === 'quente' ? 'selected' : ''}>Quente</option>
-                        </select>
-                    </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Produto/Serviço</label>
+                    <div class="form-control" style="background: #f8f9fa;">${lead.product}</div>
                 </div>
+                
                 <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Status</label>
-                        <select class="form-control" id="editLeadStatus" required>
-                            <option value="aberto" ${lead.status === 'aberto' ? 'selected' : ''}>Aberto</option>
-                            <option value="negociacao" ${lead.status === 'negociacao' ? 'selected' : ''}>Negociação</option>
-                            <option value="proposta" ${lead.status === 'proposta' ? 'selected' : ''}>Proposta Enviada</option>
-                            <option value="ganho" ${lead.status === 'ganho' ? 'selected' : ''}>Ganho</option>
-                            <option value="perdido" ${lead.status === 'perdido' ? 'selected' : ''}>Perdido</option>
-                        </select>
-                    </div>
                     <div class="form-group">
                         <label class="form-label">Data da Visita</label>
-                        <input type="date" class="form-control" id="editLeadVisitDate" value="${lead.visitDate || ''}" required>
+                        <div class="form-control" style="background: #f8f9fa;">${new Date(lead.visitDate).toLocaleDateString('pt-BR')}</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Vendedor</label>
+                        <div class="form-control" style="background: #f8f9fa;">${lead.sellerName}</div>
                     </div>
                 </div>
+                
                 <div class="form-group">
                     <label class="form-label">Observações</label>
-                    <textarea class="form-control" id="editLeadNotes" rows="4">${lead.notes || ''}</textarea>
+                    <div class="form-control" style="background: #f8f9fa; min-height: 100px;">${lead.notes || 'Sem observações'}</div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeLeadDetailsModal()">Fechar</button>
+                    <button type="button" class="btn btn-primary" onclick="showUpdateStatusModal('${lead.id}')">
+                        <i class="fas fa-exchange-alt"></i> Alterar Status
+                    </button>
                 </div>
             `;
             
-            // Mostrar modal
-            document.getElementById('editLeadModal').classList.remove('hidden');
-        };
+            document.getElementById('leadDetailsModal').classList.remove('hidden');
+        }
 
-        window.changeLeadStatus = function(leadId) {
+        window.closeLeadDetailsModal = function() {
+            document.getElementById('leadDetailsModal').classList.add('hidden');
+            currentLeadDetailsId = null;
+        }
+
+        window.showUpdateStatusModal = function(leadId) {
             const lead = allLeads.find(l => l.id === leadId);
             if (!lead) return;
             
-            currentStatusChangeLeadId = leadId;
+            document.getElementById('updateLeadId').value = leadId;
+            document.getElementById('newStatus').value = lead.status;
             
-            // Preencher status atual
-            document.getElementById('newStatusSelect').value = lead.status || 'aberto';
-            
-            // Mostrar modal
-            document.getElementById('changeStatusModal').classList.remove('hidden');
-        };
+            document.getElementById('updateStatusModal').classList.remove('hidden');
+        }
 
-        window.deleteLeadPrompt = function(leadId) {
+        window.showResultModal = function(leadId, resultType) {
             const lead = allLeads.find(l => l.id === leadId);
             if (!lead) return;
             
-            if (confirm(`Tem certeza que deseja excluir o lead "${lead.name || 'Sem nome'}"? Esta ação não pode ser desfeita.`)) {
-                deleteLead(leadId).then(result => {
-                    alert(result.message);
-                });
+            document.getElementById('resultLeadId').value = leadId;
+            document.getElementById('resultType').value = resultType;
+            document.getElementById('resultModalTitle').textContent = 
+                resultType === 'ganho' ? 'Marcar como Ganho' : 'Marcar como Perdido';
+            
+            document.getElementById('resultModal').classList.remove('hidden');
+        }
+
+        window.showReminderModal = function(leadId = '') {
+            document.getElementById('reminderLead').value = leadId;
+            document.getElementById('reminderModal').classList.remove('hidden');
+        }
+
+        // ================ REMINDERS FUNCTIONS ================
+        function populateReminderLeadSelect() {
+            const select = document.getElementById('reminderLead');
+            if (!select) return;
+            
+            select.innerHTML = '<option value="">Selecionar lead (opcional)</option>';
+            
+            allLeads.forEach(lead => {
+                const option = document.createElement('option');
+                option.value = lead.id;
+                option.textContent = `${lead.company} - ${lead.contact}`;
+                select.appendChild(option);
+            });
+        }
+
+        function updateRemindersList() {
+            const container = document.getElementById('remindersList');
+            if (!container) return;
+            
+            if (allReminders.length === 0) {
+                container.innerHTML = '<div class="text-center" style="padding: 40px; color: #999;">Nenhum lembrete cadastrado</div>';
+                return;
             }
-        };
+            
+            // Ordenar por data mais próxima
+            const sortedReminders = [...allReminders].sort((a, b) => {
+                const dateA = new Date(`${a.date}T${a.time}`);
+                const dateB = new Date(`${b.date}T${b.time}`);
+                return dateA - dateB;
+            });
+            
+            container.innerHTML = sortedReminders.map(reminder => {
+                const lead = allLeads.find(l => l.id === reminder.leadId);
+                const dateTime = new Date(`${reminder.date}T${reminder.time}`);
+                const isToday = reminder.date === new Date().toISOString().split('T')[0];
+                
+                return `
+                    <div class="activity-item ${isToday ? 'activity-item-today' : ''}">
+                        <div class="activity-title">
+                            <i class="fas fa-bell" style="color: #FFDE00;"></i>
+                            ${reminder.title}
+                        </div>
+                        <div class="activity-date">
+                            <i class="fas fa-calendar"></i>
+                            ${dateTime.toLocaleString('pt-BR')}
+                            ${lead ? ` - ${lead.company}` : ''}
+                        </div>
+                        <div style="font-size: 13px; color: #666; margin-top: 5px;">
+                            ${reminder.notes || ''}
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <button class="btn-icon" onclick="completeReminder('${reminder.id}')" title="Marcar como concluído">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn-icon" onclick="deleteReminder('${reminder.id}')" title="Excluir lembrete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.completeReminder = function(reminderId) {
+            const index = allReminders.findIndex(r => r.id === reminderId);
+            if (index !== -1) {
+                allReminders[index].completed = true;
+                updateRemindersList();
+            }
+        }
+
+        window.deleteReminder = function(reminderId) {
+            if (confirm('Tem certeza que deseja excluir este lembrete?')) {
+                allReminders = allReminders.filter(r => r.id !== reminderId);
+                updateRemindersList();
+            }
+        }
 
         // ================ EVENT LISTENERS ================
         document.addEventListener('DOMContentLoaded', () => {
-            // Login Form
+            // Login
             document.getElementById('loginForm').addEventListener('submit', (e) => {
                 e.preventDefault();
                 const email = document.getElementById('loginEmail').value;
                 const password = document.getElementById('loginPassword').value;
-                
                 handleLogin(email, password);
             });
             
             // Logout
             document.getElementById('logoutBtn').addEventListener('click', handleLogout);
             
-            // Menu Navigation
+            // Menu
             document.querySelectorAll('.menu-item').forEach(item => {
                 item.addEventListener('click', (e) => {
                     e.preventDefault();
                     const page = item.getAttribute('data-page');
-                    
-                    if (page === 'dashboard') showPage('pageDashboard');
-                    else if (page === 'leads') showPage('pageLeads');
-                    else if (page === 'newLead') showPage('pageNewLead');
-                    else if (page === 'admin') showPage('pageAdmin');
-                    else if (page === 'profile') showPage('pageProfile');
+                    showPage(`page${page.charAt(0).toUpperCase() + page.slice(1)}`);
                 });
             });
             
@@ -2177,207 +1749,140 @@
                 e.preventDefault();
                 
                 const leadData = {
-                    name: document.getElementById('leadName').value,
+                    company: document.getElementById('leadCompany').value,
+                    cnpj: document.getElementById('leadCNPJ').value,
+                    segment: document.getElementById('leadSegment').value,
+                    contact: document.getElementById('leadName').value,
+                    position: document.getElementById('leadPosition').value,
                     phone: document.getElementById('leadPhone').value,
                     email: document.getElementById('leadEmail').value,
-                    city: document.getElementById('leadCity').value,
-                    product: document.getElementById('leadProduct').value,
                     temperature: document.getElementById('leadTemperature').value,
-                    status: document.getElementById('leadStatus').value,
+                    product: document.getElementById('leadProduct').value,
+                    source: document.getElementById('leadSource').value,
                     visitDate: document.getElementById('leadVisitDate').value,
-                    sellerId: document.getElementById('leadSeller').value,
+                    visitType: document.getElementById('leadVisitType').value,
                     notes: document.getElementById('leadNotes').value
                 };
-                
-                // Validar data (deve ser hoje ou no passado)
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const visitDate = new Date(leadData.visitDate);
-                
-                if (visitDate > today) {
-                    alert('A data da visita não pode ser no futuro.');
-                    return;
-                }
                 
                 saveLead(leadData).then(result => {
                     alert(result.message);
                     if (result.success) {
                         document.getElementById('leadForm').reset();
-                        // Definir data atual como padrão
                         document.getElementById('leadVisitDate').valueAsDate = new Date();
+                        showPage('pageKanban');
                     }
                 });
             });
             
-            // Cancelar novo lead
             document.getElementById('btnCancelLead').addEventListener('click', () => {
                 document.getElementById('leadForm').reset();
-                // Definir data atual como padrão
                 document.getElementById('leadVisitDate').valueAsDate = new Date();
+                showPage('pageKanban');
             });
             
-            // Novo lead da lista
-            document.getElementById('btnNewLeadFromList').addEventListener('click', () => {
-                showPage('pageNewLead');
+            // Atualizar Kanban
+            document.getElementById('btnRefreshKanban').addEventListener('click', () => {
+                loadLeadsForKanban();
             });
             
-            // Filtros de leads
-            document.getElementById('filterStatus').addEventListener('change', updateLeadsTable);
-            document.getElementById('filterTemperature').addEventListener('change', updateLeadsTable);
-            document.getElementById('filterSeller').addEventListener('change', updateLeadsTable);
-            document.getElementById('filterPeriod').addEventListener('change', updateLeadsTable);
-            
-            // Limpar filtros
-            document.getElementById('btnResetFilters').addEventListener('click', () => {
-                document.getElementById('filterStatus').value = '';
-                document.getElementById('filterTemperature').value = '';
-                document.getElementById('filterSeller').value = '';
-                document.getElementById('filterPeriod').value = 'current_month';
-                updateLeadsTable();
+            // Adicionar Lembrete
+            document.getElementById('btnAddReminder').addEventListener('click', () => {
+                showReminderModal();
             });
             
-            // Editar lead (modal)
-            document.getElementById('editLeadForm').addEventListener('submit', (e) => {
+            // Salvar Lembrete
+            document.getElementById('reminderForm').addEventListener('submit', (e) => {
                 e.preventDefault();
                 
-                const leadData = {
-                    name: document.getElementById('editLeadName').value,
-                    phone: document.getElementById('editLeadPhone').value,
-                    email: document.getElementById('editLeadEmail').value,
-                    city: document.getElementById('editLeadCity').value,
-                    product: document.getElementById('editLeadProduct').value,
-                    temperature: document.getElementById('editLeadTemperature').value,
-                    status: document.getElementById('editLeadStatus').value,
-                    visitDate: document.getElementById('editLeadVisitDate').value,
-                    notes: document.getElementById('editLeadNotes').value,
-                    createdAt: allLeads.find(l => l.id === currentEditingLeadId)?.createdAt || new Date().toISOString()
+                const reminderData = {
+                    title: document.getElementById('reminderTitle').value,
+                    date: document.getElementById('reminderDate').value,
+                    time: document.getElementById('reminderTime').value,
+                    leadId: document.getElementById('reminderLead').value || null,
+                    notes: document.getElementById('reminderNotes').value
                 };
                 
-                saveLead(leadData, currentEditingLeadId).then(result => {
+                saveReminder(reminderData).then(result => {
                     alert(result.message);
                     if (result.success) {
-                        document.getElementById('editLeadModal').classList.add('hidden');
-                        currentEditingLeadId = null;
+                        document.getElementById('reminderForm').reset();
+                        document.getElementById('reminderModal').classList.add('hidden');
+                        updateRemindersList();
                     }
                 });
             });
             
-            // Cancelar edição
-            document.getElementById('btnCancelEdit').addEventListener('click', () => {
-                document.getElementById('editLeadModal').classList.add('hidden');
-                currentEditingLeadId = null;
-            });
-            
-            // Alterar status (modal)
-            document.getElementById('btnConfirmStatus').addEventListener('click', () => {
-                const newStatus = document.getElementById('newStatusSelect').value;
-                const note = document.getElementById('statusChangeNote').value;
+            // Atualizar Status
+            document.getElementById('updateStatusForm').addEventListener('submit', (e) => {
+                e.preventDefault();
                 
-                if (!newStatus) {
-                    alert('Selecione um status válido.');
-                    return;
-                }
+                const leadId = document.getElementById('updateLeadId').value;
+                const newStatus = document.getElementById('newStatus').value;
+                const notes = document.getElementById('statusNotes').value;
                 
-                updateLeadStatus(currentStatusChangeLeadId, newStatus, note).then(result => {
+                updateLeadStatus(leadId, newStatus, notes).then(result => {
                     alert(result.message);
                     if (result.success) {
-                        document.getElementById('changeStatusModal').classList.add('hidden');
-                        currentStatusChangeLeadId = null;
-                        document.getElementById('statusChangeNote').value = '';
+                        document.getElementById('updateStatusForm').reset();
+                        document.getElementById('updateStatusModal').classList.add('hidden');
+                        if (currentLeadDetailsId) {
+                            showLeadDetails(currentLeadDetailsId);
+                        }
                     }
                 });
             });
             
-            // Cancelar alteração de status
+            // Resultado (Ganho/Perdido)
+            document.getElementById('resultForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const leadId = document.getElementById('resultLeadId').value;
+                const resultType = document.getElementById('resultType').value;
+                const resultData = {
+                    value: document.getElementById('resultValue').value,
+                    date: document.getElementById('resultDate').value,
+                    reason: document.getElementById('resultReason').value,
+                    notes: document.getElementById('resultNotes').value
+                };
+                
+                setLeadResult(leadId, resultType, resultData).then(result => {
+                    alert(result.message);
+                    if (result.success) {
+                        document.getElementById('resultForm').reset();
+                        document.getElementById('resultModal').classList.add('hidden');
+                    }
+                });
+            });
+            
+            // Fechar modais
+            document.getElementById('closeLeadModal').addEventListener('click', closeLeadDetailsModal);
+            document.getElementById('closeReminderModal').addEventListener('click', () => {
+                document.getElementById('reminderModal').classList.add('hidden');
+            });
+            document.getElementById('closeStatusModal').addEventListener('click', () => {
+                document.getElementById('updateStatusModal').classList.add('hidden');
+            });
+            document.getElementById('closeResultModal').addEventListener('click', () => {
+                document.getElementById('resultModal').classList.add('hidden');
+            });
+            
+            document.getElementById('btnCancelReminder').addEventListener('click', () => {
+                document.getElementById('reminderModal').classList.add('hidden');
+            });
+            
             document.getElementById('btnCancelStatus').addEventListener('click', () => {
-                document.getElementById('changeStatusModal').classList.add('hidden');
-                currentStatusChangeLeadId = null;
-                document.getElementById('statusChangeNote').value = '';
+                document.getElementById('updateStatusModal').classList.add('hidden');
             });
             
-            // Criar vendedor
-            document.getElementById('createSellerForm').addEventListener('submit', (e) => {
-                e.preventDefault();
-                
-                const name = document.getElementById('sellerName').value;
-                const email = document.getElementById('sellerEmail').value;
-                const password = document.getElementById('sellerPassword').value;
-                const confirmPassword = document.getElementById('sellerConfirmPassword').value;
-                
-                // Validar senhas
-                if (password !== confirmPassword) {
-                    alert('As senhas não coincidem.');
-                    return;
-                }
-                
-                if (password.length < 6) {
-                    alert('A senha deve ter pelo menos 6 caracteres.');
-                    return;
-                }
-                
-                const userData = { name, email, password };
-                
-                createSeller(userData).then(result => {
-                    alert(result.message);
-                    if (result.success) {
-                        document.getElementById('createSellerForm').reset();
-                    }
-                });
+            document.getElementById('btnCancelResult').addEventListener('click', () => {
+                document.getElementById('resultModal').classList.add('hidden');
             });
             
-            // Alterar senha
-            document.getElementById('changePasswordForm').addEventListener('submit', (e) => {
-                e.preventDefault();
-                
-                const currentPassword = document.getElementById('currentPassword').value;
-                const newPassword = document.getElementById('newPassword').value;
-                const confirmNewPassword = document.getElementById('confirmNewPassword').value;
-                
-                // Validar senhas
-                if (newPassword !== confirmNewPassword) {
-                    alert('As novas senhas não coincidem.');
-                    return;
-                }
-                
-                if (newPassword.length < 6) {
-                    alert('A nova senha deve ter pelo menos 6 caracteres.');
-                    return;
-                }
-                
-                changePassword(currentPassword, newPassword).then(result => {
-                    alert(result.message);
-                    if (result.success) {
-                        document.getElementById('changePasswordForm').reset();
-                    }
-                });
-            });
-            
-            // Verificar se usuário já está logado
-            auth.onAuthStateChanged((user) => {
-                if (user) {
-                    // Usuário já está logado
-                    currentUser = user;
-                    userRole = detectUserRole(currentUser.email);
-                    
-                    loadInitialData();
-                    updateUIForRole();
-                    showScreen('dashboardScreen');
-                    
-                    // Redirecionar conforme perfil
-                    if (userRole === 'vendedor') {
-                        showPage('pageNewLead');
-                    } else {
-                        showPage('pageDashboard');
-                    }
-                } else {
-                    // Usuário não está logado
-                    showScreen('loginScreen');
-                }
-            });
-            
-            // Configurar data atual no formulário
+            // Configurar data atual
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('leadVisitDate').value = today;
+            document.getElementById('reminderDate').value = today;
+            document.getElementById('resultDate').value = today;
         });
     </script>
 </body>
